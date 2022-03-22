@@ -10,7 +10,7 @@ const NodesQuery = `
 `
 
 function Nodes({ code, open }) {
-  console.log('code', code)
+  // console.log('code', code)
   const [updateTree, setUpdateTree] = useState(() => () => {})
   const canvasRef = useRef()
   const [queryResult] = useQuery({
@@ -28,8 +28,7 @@ function Nodes({ code, open }) {
 
   useEffect(() => {
     if (queryResult.data) {
-      console.log('queryResult.data.codeToAst', queryResult.data.codeToAst)
-      updateTree(queryResult.data.codeToAst)
+      updateTree(JSON.parse(queryResult.data.codeToAst))
     }
   }, [updateTree, queryResult])
 
@@ -74,40 +73,16 @@ function handleCanvas(canvas) {
   }
 
   const state = {
-    nodes: [
-      {
-        id: '1',
-        x: width / 2,
-        y: height / 2,
-        label: 'sum',
-        inputs: [
-          {
-            id: '2',
-            type: 'any',
-            label: 'a',
-          },
-          {
-            id: '3',
-            type: 'any',
-            label: 'b',
-          },
-        ],
-        outputs: [
-          {
-            id: '4',
-            type: 'any',
-            label: 'return',
-          },
-        ],
-      },
-    ],
+    nodes: {},
+    edges: {},
   }
 
   function draw() {
     _.fillStyle = drawConfiguration.backgroundColor
     _.fillRect(0, 0, width, height)
 
-    state.nodes.forEach(drawNode)
+    Object.values(state.nodes).forEach(drawNode)
+    Object.values(state.edges).forEach(drawEdge)
   }
 
   function drawNode(node) {
@@ -131,7 +106,7 @@ function handleCanvas(canvas) {
     } = drawConfiguration
 
     const nodeIoHeight = 2 * nodeIoVerticalPadding + Math.max(nodeIoCircleRadius, nodeIoLabelFontSize)
-    const width = Math.max(label.length * nodeLabelFontSize + 2 * nodeLabelPaddingHorizontal, 300)
+    const width = Math.max(label.length * nodeLabelFontSize + 2 * nodeLabelPaddingHorizontal, 300) // TODO
     const height = 2 * nodeLabelPaddingVertical + nodeLabelFontSize + Math.max(inputs.length * nodeIoHeight, outputs.length * nodeIoHeight)
     let heightCursor = 0
 
@@ -196,6 +171,17 @@ function handleCanvas(canvas) {
     _.setTransform(1, 0, 0, 1, 0, 0)
   }
 
+  function drawEdge(edge) {
+
+  }
+
+  function updateGraph(tree) {
+    const { nodes, edges } = parseTree(tree, width, height)
+
+    state.nodes = nodes
+    state.edges = edges
+  }
+
   function step() {
     draw()
 
@@ -208,8 +194,58 @@ function handleCanvas(canvas) {
 
   return {
     stop: () => stopped = true,
-    updateTree: tree => state.tree = tree,
+    updateTree: tree => updateGraph(tree),
   }
+}
+
+function parseTree(tree, width, height) {
+  const nodes = {}
+  const edges = {}
+
+  processTree(tree, nodes, edges)
+  positionNodes(nodes, edges, width, height)
+
+  return { nodes, edges }
+}
+
+function processTree(tree, nodes, edges) {
+  // console.log('tree', tree)
+  switch (tree.kind) {
+    case 'SourceFile': {
+      tree.statements.forEach(childTree => processTree(childTree, nodes, edges))
+
+      break
+    }
+    case 'FunctionDeclaration': {
+      const { id, name, parameters } = tree
+
+      const node = {
+        id,
+        label: name.escapedText,
+        inputs: parameters.map(({ id, name }) => ({
+          id,
+          label: name.escapedText,
+        })),
+        outputs: [
+          {
+            id: `${id}-return`,
+            label: 'return',
+          },
+        ],
+      }
+
+      nodes[id] = node
+
+      break
+    }
+  }
+}
+
+function positionNodes(nodes, edges, width, height) {
+  Object.values(nodes).forEach(node => {
+    node.x = Math.random() * (width - 250)
+    node.y = Math.random() * (height - 250)
+  })
 }
 
 export default Nodes

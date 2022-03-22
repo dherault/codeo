@@ -3,16 +3,30 @@ import './Home.css'
 import { useState } from 'react'
 import { Button } from '@mui/material'
 import Editor from '@monaco-editor/react'
+import useKeys from 'react-piano-keys'
 
 import Nodes from '../components/Nodes'
 
 const defaultCode = `function sum(a, b) {
   return a + b
+}
+
+function multiply(a, b) {
+  return a * b
+}
+
+function main() {
+  return sum(2, multiply(2, 3))
 }`
 
 function Home() {
   const [code, setCode] = useState(defaultCode)
   const [mode, setMode] = useState('nodes')
+
+  useKeys(window, 'cmd+s', event => {
+    event.preventDefault()
+    console.log('Saved!')
+  })
 
   return (
     <div>
