@@ -7,15 +7,20 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node src/index.js",
-    "start:watch": "nodemon --watch src --exec \"npm run start\""
+    "start:watch": "nodemon --watch src --exec \"npm run start\"",
+    "dev": "nodemon --watch src --exec \"npm run printSchema\"",
+    "printSchema": "node scripts/printSchema.js"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@urql/introspection": "^0.3.2",
     "cors": "^2.8.5",
     "express": "^4.17.3",
     "express-graphql": "^0.12.0",
-    "graphql": "^16.3.0"
+    "graphql": "^16.3.0",
+    "node-fetch": "^2.x.x",
+    "typescript": "^4.6.2"
   },
   "devDependencies": {
     "nodemon": "^2.0.15"

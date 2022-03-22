@@ -3,13 +3,9 @@ const { graphqlHTTP } = require('express-graphql')
 const cors = require('cors')
 
 const schema = require('./schema')
+const resolvers = require('./resolvers')
 
 const isProduction = process.env.NODE_ENV === 'production'
-
-// The root provides a resolver function for each API endpoint
-const root = {
-  hello: () => 'Hello world!',
-}
 
 const app = express()
 const port = process.env.PORT || 5001
@@ -19,9 +15,9 @@ app.use(cors({
   origin: isProduction ? 'https://codeo.love' : '*',
 }))
 
-app.use('/graphql', graphqlHTTP({
+app.use('/', graphqlHTTP({
   schema,
-  rootValue: root,
+  rootValue: resolvers,
   graphiql: true,
 }))
 
