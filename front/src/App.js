@@ -1,3 +1,4 @@
+import { Provider as GraphqlProvider } from 'urql'
 import { CssBaseline, ThemeProvider } from '@mui/material'
 import {
   BrowserRouter,
@@ -7,22 +8,25 @@ import {
 
 import Home from './scenes/Home'
 
+import client from './client'
 import theme from './theme'
 
 function App() {
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <BrowserRouter>
-        <Routes>
-          <Route
-            exact
-            path="/"
-            element={<Home />}
-          />
-        </Routes>
-      </BrowserRouter>
-    </ThemeProvider>
+    <GraphqlProvider value={client}>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <BrowserRouter>
+          <Routes>
+            <Route
+              exact
+              path="/"
+              element={<Home />}
+            />
+          </Routes>
+        </BrowserRouter>
+      </ThemeProvider>
+    </GraphqlProvider>
   )
 }
 

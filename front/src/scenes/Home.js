@@ -12,7 +12,7 @@ const defaultCode = `function sum(a, b) {
 
 function Home() {
   const [code, setCode] = useState(defaultCode)
-  const [mode, setMode] = useState('editor')
+  const [mode, setMode] = useState('nodes')
 
   return (
     <div>
