@@ -1,0 +1,26 @@
+{
+  "name": "codeo",
+  "version": "1.0.0",
+  "description": "The codeo app",
+  "main": "none.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dherault/codeo.git"
+  },
+  "keywords": [
+    "codeo"
+  ],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/dherault/codeo/issues"
+  },
+  "homepage": "https://github.com/dherault/codeo#readme",
+  "devDependencies": {
+    "eslint": "^8.11.0",
+    "eslint-config-dherault": "^1.7.2"
+  }
+}
