@@ -16,7 +16,9 @@ function multiply(a, b) {
 }
 
 function main() {
-  return sum(2, multiply(2, 3))
+  console.log('Main')
+
+  return sum(2, multiply(2, 3)) +  4
 }`
 
 function Home() {

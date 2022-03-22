@@ -42,7 +42,7 @@ function Nodes({ code, open }) {
 
 function handleCanvas(canvas) {
   const _ = canvas.getContext('2d')
-
+  const rect = canvas.getBoundingClientRect()
   const dpr = getCanvasDpr(_)
   let stopped = false
 
@@ -73,6 +73,8 @@ function handleCanvas(canvas) {
   }
 
   const state = {
+    globalTree: null,
+    currentNodeId: null,
     nodes: {},
     edges: {},
   }
@@ -108,6 +110,11 @@ function handleCanvas(canvas) {
     const nodeIoHeight = 2 * nodeIoVerticalPadding + Math.max(nodeIoCircleRadius, nodeIoLabelFontSize)
     const width = Math.max(label.length * nodeLabelFontSize + 2 * nodeLabelPaddingHorizontal, 300) // TODO
     const height = 2 * nodeLabelPaddingVertical + nodeLabelFontSize + Math.max(inputs.length * nodeIoHeight, outputs.length * nodeIoHeight)
+
+    // ! Oh
+    node.width = width
+    node.height = height
+
     let heightCursor = 0
 
     _.translate(x, y)
@@ -175,11 +182,46 @@ function handleCanvas(canvas) {
 
   }
 
-  function updateGraph(tree) {
-    const { nodes, edges } = parseTree(tree, width, height)
+  function updateGraph(globalTree, currentNodeId = 1) {
+    const { nodes, edges } = parseTree(getChildTree(globalTree, currentNodeId), width, height)
 
     state.nodes = nodes
     state.edges = edges
+    state.currentNodeId = currentNodeId
+  }
+
+  function handleMouseDown() {
+
+  }
+
+  function handleMouseMove() {
+
+  }
+
+  function handleClick(event) {
+    const x = (event.clientX - rect.left) * dpr
+    const y = (event.clientY - rect.top) * dpr
+
+    console.log('x, y', x, y)
+    console.log('x, y', state.nodes)
+
+    const clickedNode = Object.values(state.nodes).find(node => x >= node.x && x <= node.x + node.width && y >= node.y && y <= node.y + node.height)
+
+    if (clickedNode && clickedNode.type === 'FunctionDeclaration') {
+      updateGraph(state.globalTree, clickedNode.id)
+    }
+  }
+
+  function registerEvents() {
+    canvas.addEventListener('mousedown', handleMouseDown)
+    canvas.addEventListener('mousemove', handleMouseMove)
+    canvas.addEventListener('click', handleClick)
+
+    return () => {
+      canvas.removeEventListener('mousedown', handleMouseDown)
+      canvas.removeEventListener('mousemove', handleMouseMove)
+      canvas.removeEventListener('click', handleClick)
+    }
   }
 
   function step() {
@@ -190,11 +232,19 @@ function handleCanvas(canvas) {
     requestAnimationFrame(step)
   }
 
+  const unregisterEvents = registerEvents()
+
   requestAnimationFrame(step)
 
   return {
-    stop: () => stopped = true,
-    updateTree: tree => updateGraph(tree),
+    stop: () => {
+      stopped = true
+      unregisterEvents()
+    },
+    updateTree: globalTree => {
+      state.globalTree = globalTree
+      updateGraph(globalTree)
+    },
   }
 }
 
@@ -222,6 +272,7 @@ function processTree(tree, nodes, edges) {
       const node = {
         id,
         label: name.escapedText,
+        type: 'FunctionDeclaration',
         inputs: parameters.map(({ id, name }) => ({
           id,
           label: name.escapedText,
@@ -246,6 +297,18 @@ function positionNodes(nodes, edges, width, height) {
     node.x = Math.random() * (width - 250)
     node.y = Math.random() * (height - 250)
   })
+}
+
+function getChildTree(tree, nodeId) {
+  if (tree.id === nodeId) return tree
+
+  for (let i = 0; i < (tree.statements || []).length; i++) {
+    const childTree = getChildTree(tree.statements[i], nodeId)
+
+    if (childTree) return childTree
+  }
+
+  return null
 }
 
 export default Nodes
