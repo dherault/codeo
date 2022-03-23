@@ -1,11 +1,8 @@
 import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
-// import { STLLoader } from 'three/examples/jsm/loaders/STLLoader'
+import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
-// import { GUI } from 'dat.gui'
-
-import tetrahedron from '../data/tetrahedron.json'
-import elongatedSquareCupola from '../data/elongated square cupola.json'
+import { GUI } from 'dat.gui'
 
 function Solids() {
   const containerRef = useRef()
@@ -29,6 +26,10 @@ function runCanvas(element) {
   let controls
   let directionalLight
   let stopped = false
+
+  const state = {
+    isSelectingFaces: false,
+  }
 
   init()
   drawGui()
@@ -61,30 +62,19 @@ function runCanvas(element) {
 
     window.addEventListener('resize', onWindowResize)
 
-    scene.add(createMesh(tetrahedron, { x: 0, y: 0, z: 0 }))
-    scene.add(createMesh(elongatedSquareCupola, { x: 4, y: 0, z: 0 }))
+    loadMesh('/solids/tetrahedron.obj', { x: 0, y: 0, z: 0 })
+    loadMesh('/solids/elongated square cupola.obj', { x: 4, y: 0, z: 0 })
   }
 
-  function createMesh(data, position) {
-    const face0 = data.faces[0]
-    const triangle = new THREE.Triangle(
-      new THREE.Vector3(...data.vertices[face0[0]]),
-      new THREE.Vector3(...data.vertices[face0[1]]),
-      new THREE.Vector3(...data.vertices[face0[2]]),
-    )
-    const normal = triangle.getNormal(new THREE.Vector3())
+  function loadMesh(url, position) {
+    const loader = new OBJLoader()
 
-    const geometry = new THREE.PolyhedronBufferGeometry(data.vertices.flat(), data.faces.flat(), 1, 0)
+    loader.load(url, mesh => {
+      mesh.position.set(position.x, position.y, position.z)
+      mesh.lookAt(0, 1, 0)
 
-    const material = new THREE.MeshPhongMaterial({ color: 0xff0000 })
-
-    const mesh = new THREE.Mesh(geometry, material)
-
-    mesh.up.set(normal.x, normal.y, normal.z)
-    mesh.position.set(position.x, position.y, position.z)
-    mesh.lookAt(0, 1, 0)
-
-    return mesh
+      scene.add(mesh)
+    })
   }
 
   function onWindowResize() {
@@ -97,15 +87,8 @@ function runCanvas(element) {
   }
 
   function drawGui() {
-    // const gui = new GUI()
-    // const meshFolder = gui.addFolder('Cube')
-    // // meshFolder.add(mesh.rotation, 'x', 0, Math.PI * 2)
-    // // meshFolder.add(mesh.rotation, 'y', 0, Math.PI * 2)
-    // // meshFolder.add(mesh.rotation, 'z', 0, Math.PI * 2)
-    // meshFolder.open()
-    // const cameraFolder = gui.addFolder('Camera')
-    // cameraFolder.add(camera.position, 'z', 0, 10)
-    // cameraFolder.open()
+    const gui = new GUI()
+    gui.add(state, 'isSelectingFaces').onChange(value => state.isSelectingFaces = value)
   }
 
   function animate() {
