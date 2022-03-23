@@ -1,3 +1,8 @@
 .blocks-canvas {
   background-color: #eee;
 }
+
+.blocks-selection {
+  background-color: rgba(220, 20, 60, 0.25);
+  border: 1px solid rgba(220, 20, 60, 0.5);
+}

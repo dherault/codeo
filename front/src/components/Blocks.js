@@ -50,6 +50,7 @@ function Blocks() {
   const [selectedBlockIds, setSelectedBlockIds] = useState([])
   const [movingBlockMetadata, setMovingBlockMetadata] = useState(null)
   const [newBlockPosition, setNewBlockPosition] = useState(null)
+  const [selection, setSelection] = useState(null)
 
   function addNewBlock(name) {
     const id = Math.random()
@@ -65,41 +66,53 @@ function Blocks() {
     setNewBlockPosition(null)
   }
 
-  function handleBlockClick(event, block) {
-    event.stopPropagation()
-    // setSelectedBlockIds([block.id])
-  }
-
-  function handleBlockMouseDown(event, block) {
-    setMovingBlockMetadata({
-      id: block.id,
-      offsetX: block.position.x - event.clientX,
-      offsetY: block.position.y - event.clientY,
-    })
-
-    console.log('block.id', block.id)
+  function handleClick(event) {
+    if (computeSelectionDiagonal(selection) < 1 && !selectedBlockIds.length) {
+      setNewBlockPosition(getEventPosition(event))
+    }
+    else {
+      // setSelectedBlockIds([])
+    }
+    setSelection(null)
   }
 
   function handleMouseDown(event) {
-    //
+    const position = getEventPosition(event)
+
+    if (!Object.values(blocks).find(block => isPointInBlock(position, block))) {
+      setSelection({ start: position, end: position })
+    }
   }
 
   function handleMouseUp() {
     setMovingBlockMetadata(null)
   }
 
-  function handleClick(event) {
-    const { left, top } = canvasRef.current.getBoundingClientRect()
+  function handleMouseMove(event) {
+    if (selection) {
+      const nextSelection = {
+        ...selection,
+        end: getEventPosition(event),
+      }
 
-    const position = {
-      x: event.clientX - left,
-      y: event.clientY - top,
+      setSelection(nextSelection)
+
+      const { start, end } = nextSelection
+
+      setSelectedBlockIds(
+        Object.values(blocks).reduce(
+          (nextBlockIds, block) => {
+            const isInSelection = block.position.x >= start.x && block.position.x <= end.x && block.position.y >= start.y && block.position.y <= end.y
+
+            return isInSelection ? [...nextBlockIds, block.id] : nextBlockIds
+          },
+          []
+        )
+      )
+
+      return
     }
 
-    setNewBlockPosition(position)
-  }
-
-  function handleMouseMove(event) {
     if (!movingBlockMetadata) return
 
     const { clientX, clientY } = event
@@ -127,10 +140,38 @@ function Blocks() {
     }
   }
 
-  function isCloseToClear({ x, y }) {
-    const { width } = canvasRef.current.getBoundingClientRect()
+  function handleBlockClick(event, block) {
+    event.stopPropagation()
+  }
 
-    return x > width - 96 && y < 32
+  function handleBlockMouseDown(event, block) {
+    setMovingBlockMetadata({
+      id: block.id,
+      offsetX: block.position.x - event.clientX,
+      offsetY: block.position.y - event.clientY,
+    })
+  }
+
+  function handleBlockMouseUp(event, block) {
+    event.stopPropagation()
+    setMovingBlockMetadata(null)
+  }
+
+  function handleNewBlockModalClose() {
+    setNewBlockPosition(null)
+  }
+
+  function getEventPosition(event) {
+    const { left, top } = canvasRef.current.getBoundingClientRect()
+
+    return {
+      x: event.clientX - left,
+      y: event.clientY - top,
+    }
+  }
+
+  function isPointInBlock({ x, y }, block) {
+    return x >= block.position.x && x <= block.position.x + blockSize && y >= block.position.y && y <= block.position.y + blockSize
   }
 
   function snapPosition({ x, y }, excludeBlockId) {
@@ -168,8 +209,18 @@ function Blocks() {
     }
   }
 
-  function handleNewBlockModalClose() {
-    setNewBlockPosition(null)
+  function isCloseToClear({ x, y }) {
+    const { width } = canvasRef.current.getBoundingClientRect()
+
+    return x > width - 96 && y < 32
+  }
+
+  function computeSelectionDiagonal(selection) {
+    if (!selection) return 0
+
+    const { start, end } = selection
+
+    return Math.sqrt((start.x - end.x) ** 2 + (start.y - end.y) ** 2)
   }
 
   return (
@@ -198,6 +249,7 @@ function Blocks() {
             key={block.id}
             onClick={event => handleBlockClick(event, block)}
             onMouseDown={event => handleBlockMouseDown(event, block)}
+            onMouseUp={event => handleBlockMouseUp(event, block)}
             className="position-absolute x5"
             style={{
               top: block.position.y,
@@ -211,11 +263,15 @@ function Blocks() {
           </div>
         ))}
         {!!movingBlockMetadata && (
-          <div
-            className="position-absolute top-0 right-0 p-1 x5"
-          >
+          <div className="position-absolute top-0 right-0 p-1 x5">
             <CloseIcon />
           </div>
+        )}
+        {!!selection && (
+          <div
+            className="position-absolute blocks-selection"
+            style={{ top: selection.start.y, left: selection.start.x, width: selection.end.x - selection.start.x, height: selection.end.y - selection.start.y }}
+          />
         )}
       </div>
       <Dialog
@@ -240,7 +296,6 @@ function Blocks() {
         <DialogActions>
           <Button onClick={handleNewBlockModalClose}>Cancel</Button>
         </DialogActions>
-
       </Dialog>
     </div>
   )
