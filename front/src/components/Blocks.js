@@ -8,39 +8,225 @@ import { Button, Dialog, DialogActions, DialogContent, DialogTitle } from '@mui/
 import Block from './Block'
 
 const allBlocks = {
-  '.': [0],
-  0: [0],
-  1: [0],
-  2: [0],
-  12: [0],
-  var1: [0],
-  var2: [0],
-  var3: [0],
-  var4: [0],
-  var5: [0],
-  repeat: [2],
-  wait: [1, 2],
-  waitUntil: [1],
-  if: [2, 3],
-  else: [2, 3],
-  set: [2],
-  def: [2],
-  return: [1],
-  '+': [2],
-  '-': [2],
-  '*': [2],
-  '%': [2],
-  '/': [2],
-  '>': [2],
-  '<': [2],
-  '=': [2],
-  '!': [1],
-  '(': [1],
-  ')': [1],
-  OR: [2],
-  AND: [2],
-  log: [1],
+  0: [
+    {
+      type: 'number',
+      poly: true,
+    },
+  ],
+  1: [
+    {
+      type: 'number',
+      poly: true,
+    },
+  ],
+  2: [
+    {
+      type: 'number',
+      poly: true,
+    },
+  ],
+  12: [
+    {
+      type: 'number',
+      poly: true,
+    },
+  ],
+  var1: [
+    {
+      type: 'any',
+      poly: true,
+    },
+  ],
+  var2: [
+    {
+      type: 'any',
+      poly: true,
+    },
+  ],
+  var3: [
+    {
+      type: 'any',
+      poly: true,
+    },
+  ],
+  var4: [
+    {
+      type: 'any',
+      poly: true,
+    },
+  ],
+  var5: [
+    {
+      type: 'any',
+      poly: true,
+    },
+  ],
+  repeat: [
+    {
+      type: 'block',
+    },
+  ],
+  wait: [
+    {
+      type: 'number',
+    },
+  ],
+  waitUntil: [
+    {
+      type: 'bool',
+    },
+  ],
+  if: [
+    {
+      type: 'cond',
+    },
+    {
+      type: 'block',
+    },
+  ],
+  else: [
+    {
+      type: 'block',
+    },
+  ],
+  ':=': [
+    {
+      type: 'any',
+      before: true,
+    },
+    {
+      type: 'any',
+    },
+  ],
+  def: [
+    {
+      type: 'string',
+    },
+    {
+      type: 'any',
+      multiple: true,
+    },
+  ],
+  return: [
+    {
+      type: 'any',
+    },
+  ],
+  '+': [
+    {
+      type: 'number',
+      before: true,
+    },
+    {
+      type: 'number',
+    },
+  ],
+  '-': [
+    {
+      type: 'number',
+      before: true,
+    },
+    {
+      type: 'number',
+    },
+  ],
+  '*': [
+    {
+      type: 'number',
+      before: true,
+    },
+    {
+      type: 'number',
+    },
+  ],
+  '%': [
+    {
+      type: 'number',
+      before: true,
+    },
+    {
+      type: 'number',
+    },
+  ],
+  '/': [
+    {
+      type: 'number',
+      before: true,
+    },
+    {
+      type: 'number',
+    },
+  ],
+  '>': [
+    {
+      type: 'number',
+      before: true,
+    },
+    {
+      type: 'number',
+    },
+  ],
+  '<': [
+    {
+      type: 'number',
+      before: true,
+    },
+    {
+      type: 'number',
+    },
+  ],
+  '=': [
+    {
+      type: 'number',
+      before: true,
+    },
+    {
+      type: 'number',
+    },
+  ],
+  '!': [
+    {
+      type: 'any',
+    },
+  ],
+  '(': [
+    {
+      type: 'any',
+    },
+  ],
+  ')': [
+    {
+      type: 'any',
+    },
+  ],
+  OR: [
+    {
+      type: 'any',
+      before: true,
+    },
+    {
+      type: 'any',
+    },
+  ],
+  AND: [
+    {
+      type: 'any',
+      before: true,
+    },
+    {
+      type: 'any',
+    },
+  ],
+  log: [
+    {
+      type: 'any',
+      multiple: true,
+    },
+  ],
 }
+
+const defaultBlocks = { 0.043985342706571284: { id: 0.043985342706571284, name: ':=', position: { x: 627, y: 218.5 } }, 0.1616928425659918: { id: 0.1616928425659918, name: 'var1', position: { x: 691, y: 218.5 } }, 0.4641735949301844: { id: 0.4641735949301844, name: '0', position: { x: 755, y: 218.5 } }, 0.4741428079176202: { id: 0.4741428079176202, name: 'repeat', position: { x: 627, y: 282.5 } }, 0.7950606067832429: { id: 0.7950606067832429, name: 'wait', position: { x: 691, y: 282.5 } }, 0.9576366282118303: { id: 0.9576366282118303, name: '1', position: { x: 755, y: 282.5 } }, 0.17621875726405478: { id: 0.17621875726405478, name: 'if', position: { x: 691, y: 346.5 } }, 0.65259653291284: { id: 0.65259653291284, name: 'var1', position: { x: 755, y: 346.5 } }, 0.6348973701330722: { id: 0.6348973701330722, name: '%', position: { x: 819, y: 346.5 } }, 0.5399981213947833: { id: 0.5399981213947833, name: '2', position: { x: 883, y: 346.5 } }, 0.10986294814595499: { id: 0.10986294814595499, name: '=', position: { x: 947, y: 346.5 } }, 0.032340719549405206: { id: 0.032340719549405206, name: '0', position: { x: 1011, y: 346.5 } }, 0.3866079406001828: { id: 0.3866079406001828, name: 'log', position: { x: 755, y: 410.5 } }, 0.3266437319709814: { id: 0.3266437319709814, name: 'var1', position: { x: 819, y: 410.5 } } }
 const blockSize = 64
 const snapThreshold = blockSize / 8
 
@@ -66,7 +252,32 @@ function Blocks() {
     setNewBlockPosition(null)
   }
 
+  function handleExport() {
+    navigator.clipboard.writeText(JSON.stringify(blocks))
+
+    console.log('Data copied to clipboard!')
+  }
+
+  function handleImport() {
+    setBlocks(defaultBlocks)
+    setSelectedBlockIds([])
+    setMovingBlockMetadata(null)
+    setNewBlockPosition(null)
+    setSelection(null)
+  }
+
+  function handleReset() {
+    setBlocks({})
+    setSelectedBlockIds([])
+    setMovingBlockMetadata(null)
+    setNewBlockPosition(null)
+    setSelection(null)
+  }
+
   function handleClick(event) {
+    console.log('event.target', event.target === event.currentTarget)
+    if (event.currentTarget !== canvasRef.current) return
+
     if (computeSelectionDiagonal(selection) < 1 && !selectedBlockIds.length) {
       setNewBlockPosition(getEventPosition(event))
     }
@@ -84,7 +295,8 @@ function Blocks() {
     }
   }
 
-  function handleMouseUp() {
+  function handleMouseUp(event) {
+    // event.stopPropagation()
     setMovingBlockMetadata(null)
   }
 
@@ -224,18 +436,7 @@ function Blocks() {
   }
 
   return (
-    <div className="x4s h100">
-      {/* <div className="px-2 flex-shrink">
-        {Object.keys(allBlocks).map(name => (
-          <div
-            key={name}
-            className="mb-2 x1"
-            onClick={() => addBlock(name)}
-          >
-            <Block label={name} />
-          </div>
-        ))}
-      </div> */}
+    <div className="x4s h100 position-relative">
       <div
         ref={canvasRef}
         className="flex-grow blocks-canvas position-relative"
@@ -273,6 +474,28 @@ function Blocks() {
             style={{ top: selection.start.y, left: selection.start.x, width: selection.end.x - selection.start.x, height: selection.end.y - selection.start.y }}
           />
         )}
+      </div>
+      <div className="position-absolute top-0 left-0 p-2">
+        <Button
+          variant="contained"
+          onClick={handleExport}
+        >
+          Export
+        </Button>
+        <Button
+          variant="contained"
+          onClick={handleImport}
+          className="ml-2"
+        >
+          Import
+        </Button>
+        <Button
+          variant="contained"
+          onClick={handleReset}
+          className="ml-2"
+        >
+          Reset
+        </Button>
       </div>
       <Dialog
         open={!!newBlockPosition}

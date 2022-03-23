@@ -7,6 +7,7 @@ import useKeys from 'react-piano-keys'
 
 import Nodes from '../components/Nodes'
 import Blocks from '../components/Blocks'
+import Solids from '../components/Solids'
 
 const defaultCode = `function sum(a, b) {
   return a + b
@@ -24,7 +25,7 @@ function main() {
 
 function Home() {
   const [code, setCode] = useState(defaultCode)
-  const [mode, setMode] = useState('blocks')
+  const [mode, setMode] = useState('solids')
 
   useKeys(window, 'cmd+s', event => {
     event.preventDefault()
@@ -54,6 +55,13 @@ function Home() {
         >
           Blocks
         </Button>
+        <Button
+          variant="contained"
+          onClick={() => setMode('solids')}
+          className="ml-2"
+        >
+          Solids
+        </Button>
       </nav>
       <div className="position-relative">
         <Editor
@@ -82,6 +90,14 @@ function Home() {
           }}
         >
           <Blocks />
+        </div>
+        <div
+          className="position-absolute all-0 background-white y1"
+          style={{
+            display: mode === 'solids' ? 'block' : 'none',
+          }}
+        >
+          <Solids />
         </div>
       </div>
     </div>
