@@ -1,8 +1,11 @@
 import './Block.css'
 
-function Block({ label, active }) {
+function Block({ label, active, onClick = null }) {
   return (
-    <div className={`y2 no-select cursor-pointer block ${active ? 'block-active' : ''}`}>
+    <div
+      onClick={onClick}
+      className={`y2 no-select cursor-pointer block ${active ? 'block-active' : ''}`}
+    >
       <div className="block-pin block-pin-top" />
       <div className="x5">
         <div className="block-pin block-pin-left" />

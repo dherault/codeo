@@ -1,6 +1,9 @@
 import './Blocks.css'
 
 import { useRef, useState } from 'react'
+import CloseIcon from '@mui/icons-material/Close'
+
+import { Button, Dialog, DialogActions, DialogContent, DialogTitle } from '@mui/material'
 
 import Block from './Block'
 
@@ -9,15 +12,16 @@ const allBlocks = {
   0: [0],
   1: [0],
   2: [0],
+  12: [0],
   var1: [0],
   var2: [0],
   var3: [0],
   var4: [0],
+  var5: [0],
   repeat: [2],
   wait: [1, 2],
   waitUntil: [1],
   if: [2, 3],
-  then: [2, 3],
   else: [2, 3],
   set: [2],
   def: [2],
@@ -42,11 +46,12 @@ const snapThreshold = blockSize / 8
 
 function Blocks() {
   const canvasRef = useRef()
+  const [blocks, setBlocks] = useState({})
   const [selectedBlockIds, setSelectedBlockIds] = useState([])
   const [movingBlockMetadata, setMovingBlockMetadata] = useState(null)
-  const [blocks, setBlocks] = useState({})
+  const [newBlockPosition, setNewBlockPosition] = useState(null)
 
-  function addBlock(name) {
+  function addNewBlock(name) {
     const id = Math.random()
 
     setBlocks({
@@ -54,18 +59,18 @@ function Blocks() {
       [id]: {
         id,
         name,
-        position: { x: 0, y: 0 },
+        position: newBlockPosition,
       },
     })
+    setNewBlockPosition(null)
   }
 
-  function handleBlockClick(block) {
+  function handleBlockClick(event, block) {
+    event.stopPropagation()
     // setSelectedBlockIds([block.id])
   }
 
   function handleBlockMouseDown(event, block) {
-
-    console.log('block', block)
     setMovingBlockMetadata({
       id: block.id,
       offsetX: block.position.x - event.clientX,
@@ -83,6 +88,17 @@ function Blocks() {
     setMovingBlockMetadata(null)
   }
 
+  function handleClick(event) {
+    const { left, top } = canvasRef.current.getBoundingClientRect()
+
+    const position = {
+      x: event.clientX - left,
+      y: event.clientY - top,
+    }
+
+    setNewBlockPosition(position)
+  }
+
   function handleMouseMove(event) {
     if (!movingBlockMetadata) return
 
@@ -92,13 +108,29 @@ function Blocks() {
       y: clientY + movingBlockMetadata.offsetY,
     }, movingBlockMetadata.id)
 
-    setBlocks({
-      ...blocks,
-      [movingBlockMetadata.id]: {
-        ...blocks[movingBlockMetadata.id],
-        position,
-      },
-    })
+    if (isCloseToClear(position)) {
+      const nextBlocks = { ...blocks }
+
+      delete nextBlocks[movingBlockMetadata.id]
+
+      setBlocks(nextBlocks)
+      setMovingBlockMetadata(null)
+    }
+    else {
+      setBlocks({
+        ...blocks,
+        [movingBlockMetadata.id]: {
+          ...blocks[movingBlockMetadata.id],
+          position,
+        },
+      })
+    }
+  }
+
+  function isCloseToClear({ x, y }) {
+    const { width } = canvasRef.current.getBoundingClientRect()
+
+    return x > width - 96 && y < 32
   }
 
   function snapPosition({ x, y }, excludeBlockId) {
@@ -136,9 +168,13 @@ function Blocks() {
     }
   }
 
+  function handleNewBlockModalClose() {
+    setNewBlockPosition(null)
+  }
+
   return (
-    <div className="x4s">
-      <div className="px-2 flex-shrink">
+    <div className="x4s h100">
+      {/* <div className="px-2 flex-shrink">
         {Object.keys(allBlocks).map(name => (
           <div
             key={name}
@@ -148,18 +184,19 @@ function Blocks() {
             <Block label={name} />
           </div>
         ))}
-      </div>
+      </div> */}
       <div
         ref={canvasRef}
         className="flex-grow blocks-canvas position-relative"
         onMouseMove={handleMouseMove}
         onMouseDown={handleMouseDown}
         onMouseUp={handleMouseUp}
+        onClick={handleClick}
       >
         {Object.values(blocks).map(block => (
           <div
             key={block.id}
-            onClick={() => handleBlockClick(block)}
+            onClick={event => handleBlockClick(event, block)}
             onMouseDown={event => handleBlockMouseDown(event, block)}
             className="position-absolute x5"
             style={{
@@ -173,7 +210,38 @@ function Blocks() {
             />
           </div>
         ))}
+        {!!movingBlockMetadata && (
+          <div
+            className="position-absolute top-0 right-0 p-1 x5"
+          >
+            <CloseIcon />
+          </div>
+        )}
       </div>
+      <Dialog
+        open={!!newBlockPosition}
+        onClose={handleNewBlockModalClose}
+        maxWidth="md"
+      >
+        <DialogTitle>Add a new block</DialogTitle>
+        <DialogContent className="x11">
+          {Object.keys(allBlocks).map(blockName => (
+            <div
+              className="mb-2 mr-2 x5"
+              key={blockName}
+            >
+              <Block
+                label={blockName}
+                onClick={() => addNewBlock(blockName)}
+              />
+            </div>
+          ))}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleNewBlockModalClose}>Cancel</Button>
+        </DialogActions>
+
+      </Dialog>
     </div>
   )
 }
