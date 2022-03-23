@@ -6,6 +6,7 @@ import Editor from '@monaco-editor/react'
 import useKeys from 'react-piano-keys'
 
 import Nodes from '../components/Nodes'
+import Blocks from '../components/Blocks'
 
 const defaultCode = `function sum(a, b) {
   return a + b
@@ -23,7 +24,7 @@ function main() {
 
 function Home() {
   const [code, setCode] = useState(defaultCode)
-  const [mode, setMode] = useState('nodes')
+  const [mode, setMode] = useState('blocks')
 
   useKeys(window, 'cmd+s', event => {
     event.preventDefault()
@@ -46,6 +47,13 @@ function Home() {
         >
           Nodes
         </Button>
+        <Button
+          variant="contained"
+          onClick={() => setMode('blocks')}
+          className="ml-2"
+        >
+          Blocks
+        </Button>
       </nav>
       <div className="position-relative">
         <Editor
@@ -66,6 +74,14 @@ function Home() {
             code={code}
             open={mode === 'nodes'}
           />
+        </div>
+        <div
+          className="position-absolute all-0 background-white y1"
+          style={{
+            display: mode === 'blocks' ? 'block' : 'none',
+          }}
+        >
+          <Blocks />
         </div>
       </div>
     </div>

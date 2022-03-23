@@ -1,0 +1,70 @@
+.block {
+  display: inline-flex;
+  margin-top: -8px;
+  margin-left: -8px;
+}
+
+.block-body {
+  background-color: crimson;
+  color: #eee;
+  width: 64px;
+  height: 64px;
+  border: 4px solid crimson;
+}
+
+.block-pin {
+  width: 8px;
+  height: 8px;
+  background-color: crimson;
+  border: 4px solid crimson;
+}
+
+.block-pin-top {
+  background-color: #eee;
+  position: relative;
+  top: 8px;
+  border: 4px solid #eee;
+}
+
+.block-pin-left {
+  background-color: #eee;
+  position: relative;
+  left: 8px;
+  border: 4px solid #eee;
+}
+
+.block-pin-right {
+  position: relative;
+  left: -4px;
+  width: 12px;
+}
+
+.block-pin-bottom {
+  position: relative;
+  top: -4px;
+  height: 12px;
+}
+
+.block-active .block-body {
+  border: 4px solid goldenrod;
+}
+
+.block-active .block-pin {
+  border: 4px solid goldenrod;
+}
+
+.block-active .block-pin-top {
+  border-top-color: #eee;
+}
+
+.block-active .block-pin-left {
+  border-left-color: #eee;
+}
+
+.block-active .block-pin-right {
+  border-left-color: crimson;
+}
+
+.block-active .block-pin-bottom {
+  border-top-color: crimson;
+}
