@@ -27,6 +27,7 @@ function runCanvas(element) {
   let directionalLight
   let raycaster
   let gridHelper
+  let arrowHelper
   let stopped = false
 
   const mouse = new THREE.Vector2()
@@ -68,8 +69,11 @@ function runCanvas(element) {
     const axesHelper = new THREE.AxesHelper(5)
     scene.add(axesHelper)
 
+    arrowHelper = new THREE.ArrowHelper(new THREE.Vector3(1, 2, 0), new THREE.Vector3(0, 0, 0), 4, 0xffff00)
+    scene.add(arrowHelper)
+
     window.addEventListener('resize', onWindowResize)
-    // element.addEventListener('click', onClick, false)
+    element.addEventListener('click', onClick, false)
 
     loadMesh('/solids/tetrahedron.obj', { x: 0, y: 0, z: 0 })
     loadMesh('/solids/elongated square cupola.obj', { x: 4, y: 0, z: 0 })
@@ -100,38 +104,53 @@ function runCanvas(element) {
     gui.add(state, 'isSelectingFaces').onChange(value => state.isSelectingFaces = value)
   }
 
-  // function onClick(event) {
-  //   if (!state.isSelectingFaces) return
+  function onClick(event) {
+    // if (!state.isSelectingFaces) return
 
-  //   event.preventDefault()
+    event.preventDefault()
 
-  //   const { width, height, top, left } = element.getBoundingClientRect()
+    const { width, height, top, left } = element.getBoundingClientRect()
 
-  //   mouse.x = (event.clientX - left) / width * 2 - 1
-  //   mouse.y = -(event.clientY - top) / height * 2 + 1
+    mouse.x = (event.clientX - left) / width * 2 - 1
+    mouse.y = -(event.clientY - top) / height * 2 + 1
 
-  //   raycaster.setFromCamera(mouse, camera)
+    raycaster.setFromCamera(mouse, camera)
 
-  //   const intersects = raycaster.intersectObjects(scene.children)
+    const intersects = raycaster.intersectObjects(scene.children)
 
-  //   intersects.forEach(intersection => {
-  //     const { object, face } = intersection
+    intersects.forEach(intersection => {
+      const { object, face, point } = intersection
 
-  //     if (object.type !== 'Mesh') return
+      if (object.type !== 'Mesh') return
 
-  //     object.up = face.normal
-  //     object.lookAt(object.up)
-  //     // object.rotation.set(0, 0, 0)
+      // console.log('face', face)
+      // console.log('object', object)
 
-  //     console.log('object.rotation', object.rotation)
-  //   })
-  //   // if (intersects.length > 0) {
-  //   //   const intersection = intersects[0]
+      const n = face.normal.clone()
 
-  //   //   // object.geometry.faces[faceIndex].color.set(0xff0000)
-  //   //   // object.geometry.colorsNeedUpdate = true
-  //   // }
-  // }
+      n.transformDirection(object.matrixWorld)
+
+      object.up = n
+      object.updateMatrix()
+
+      arrowHelper.setDirection(n)
+
+      const position = object.getWorldPosition(new THREE.Vector3())
+      const lookAt = (new THREE.Vector3(0, 1, 0)).add(position)
+      // lookAt.transformDirection(object.matrixWorld)
+        // object.up.set(lookAt.x, lookAt.y, lookAt.z)
+
+      object.lookAt(lookAt)
+
+      // console.log('object.rotation', object.rotation)
+    })
+    // if (intersects.length > 0) {
+    //   const intersection = intersects[0]
+
+    //   // object.geometry.faces[faceIndex].color.set(0xff0000)
+    //   // object.geometry.colorsNeedUpdate = true
+    // }
+  }
 
   function animate() {
     if (stopped) return
