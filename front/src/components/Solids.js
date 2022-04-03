@@ -77,6 +77,7 @@ function runCanvas(element) {
 
     loadMesh('/solids/tetrahedron.obj', { x: 0, y: 0, z: 0 })
     loadMesh('/solids/elongated square cupola.obj', { x: 4, y: 0, z: 0 })
+    loadMesh('/solids/square cupola.obj', { x: -4, y: 0, z: 0 })
   }
 
   function loadMesh(url, position) {
@@ -100,8 +101,8 @@ function runCanvas(element) {
   }
 
   function drawGui() {
-    const gui = new GUI()
-    gui.add(state, 'isSelectingFaces').onChange(value => state.isSelectingFaces = value)
+    // const gui = new GUI()
+    // gui.add(state, 'isSelectingFaces').onChange(value => state.isSelectingFaces = value)
   }
 
   function onClick(event) {
@@ -135,12 +136,15 @@ function runCanvas(element) {
 
       arrowHelper.setDirection(n)
 
-      const position = object.getWorldPosition(new THREE.Vector3())
-      const lookAt = (new THREE.Vector3(0, 1, 0)).add(position)
-      // lookAt.transformDirection(object.matrixWorld)
-        // object.up.set(lookAt.x, lookAt.y, lookAt.z)
+      // make object face up
+      // object.rotation.set(0, 0, 0)
+      // object.updateMatrix()
+      // const position = object.getWorldPosition(new THREE.Vector3())
+      // const lookAt = (new THREE.Vector3(0, 1, 0)).add(position)
+      // // lookAt.transformDirection(object.matrixWorld)
+      //   // object.up.set(lookAt.x, lookAt.y, lookAt.z)
 
-      object.lookAt(lookAt)
+      // object.lookAt(0, 1, 0)
 
       // console.log('object.rotation', object.rotation)
     })

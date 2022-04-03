@@ -25,7 +25,7 @@ function main() {
 
 function Home() {
   const [code, setCode] = useState(defaultCode)
-  const [mode, setMode] = useState('solids')
+  const [mode, setMode] = useState('nodes')
 
   useKeys(window, 'cmd+s', event => {
     event.preventDefault()
