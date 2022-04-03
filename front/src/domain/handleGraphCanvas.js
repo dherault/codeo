@@ -2,7 +2,7 @@ import getCanvasDpr from './getCanvasDpr'
 import processTree from './processTree'
 import positionGraph from './positionGraph'
 
-function handleGraphCanvas(canvas) {
+function handleGraphCanvas(canvas, nodeHierarchy, updateNodeHierarchy) {
   const _ = canvas.getContext('2d')
   const rect = canvas.getBoundingClientRect()
   const dpr = getCanvasDpr(_)
@@ -20,42 +20,43 @@ function handleGraphCanvas(canvas) {
   */
 
   const drawConfiguration = {
-    backgroundColor: '#333',
+    backgroundColor: '#222',
+    font: "'Fira Mono', monospace",
     node: {
       radius: 4 * dpr,
-      backgroundColor: 'lightskyblue',
+      backgroundColor: 'royalblue',
       color: 'white',
-      font: 'monospace',
       labelFontSize: 16 * dpr,
       labelPaddingVertical: 4 * dpr,
       labelPaddingHorizontal: 8 * dpr,
       ioSpacing: 16 * dpr,
       ioVerticalPadding: 6 * dpr,
-      ioCircleRadius: 8 * dpr,
+      ioCircleRadius: 6 * dpr,
       ioCircleStrokeWidth: 2 * dpr,
-      ioCircleColor: 'deepskyblue',
+      ioCircleColor: '#FFCC4A',
       ioCircleHorizontalPadding: 8 * dpr,
       ioLabelFontSize: 12 * dpr,
       ioLabelPadding: 0 * dpr,
     },
     edge: {
       strokeWidth: 2 * dpr,
-      strokeColor: 'deepskyblue',
+      strokeColor: '#FFCC4A',
     },
     backButton: normalizeRect({
       y: 16,
       x: 16,
-      width: 64,
-      height: 32,
+      width: 128,
+      height: 64,
       color: 'white',
-      backgroundColor: 'deepskyblue',
+      backgroundColor: 'royalblue',
       label: 'Back',
+      fontSize: 16 * dpr,
     }),
   }
 
   const state = {
     globalTree: null,
-    currentNodeHierarchy: [],
+    currentNodeId: parseInt(nodeHierarchy[nodeHierarchy.length - 1]),
     nodes: {},
     edges: {},
     registeredClickHandlers: [
@@ -76,7 +77,7 @@ function handleGraphCanvas(canvas) {
     Object.values(state.nodes).forEach(drawNode)
     Object.entries(state.edges).forEach(([inId, outIds]) => outIds.forEach(outId => drawEdge(inId, outId)))
 
-    if (state.currentNodeHierarchy.length > 1) drawBackButton()
+    if (nodeHierarchy.length > 1) drawBackButton()
   }
 
   function drawNode(node) {
@@ -85,7 +86,6 @@ function handleGraphCanvas(canvas) {
       radius,
       backgroundColor,
       color,
-      font,
       labelFontSize,
       labelPaddingVertical,
       labelPaddingHorizontal,
@@ -120,7 +120,7 @@ function handleGraphCanvas(canvas) {
     _.fillStyle = backgroundColor
     _.fill()
     _.fillStyle = color
-    _.font = `${labelFontSize}px ${font}`
+    _.font = `${labelFontSize}px ${drawConfiguration.font}`
     _.textAlign = 'center'
     _.textBaseline = 'top'
     _.fillText(label, width / 2, labelPaddingVertical)
@@ -141,7 +141,7 @@ function handleGraphCanvas(canvas) {
       x += ioCircleRadius + ioCircleHorizontalPadding + ioLabelPadding
 
       _.fillStyle = color
-      _.font = `${ioLabelFontSize}px ${font}`
+      _.font = `${ioLabelFontSize}px ${drawConfiguration.font}`
       _.textAlign = 'left'
       _.textBaseline = 'middle'
       _.fillText(label, x, y)
@@ -161,7 +161,7 @@ function handleGraphCanvas(canvas) {
       x -= ioCircleRadius + ioCircleHorizontalPadding + ioLabelPadding
 
       _.fillStyle = color
-      _.font = `${ioLabelFontSize}px ${font}`
+      _.font = `${ioLabelFontSize}px ${drawConfiguration.font}`
       _.textAlign = 'right'
       _.textBaseline = 'middle'
       _.fillText(label, x, y)
@@ -187,12 +187,12 @@ function handleGraphCanvas(canvas) {
     drawButton(drawConfiguration.backButton)
   }
 
-  function drawButton({ x, y, width, height, color, backgroundColor, label }) {
+  function drawButton({ x, y, width, height, color, backgroundColor, label, fontSize }) {
 
     _.fillStyle = backgroundColor
     _.fillRect(x, y, width, height)
     _.fillStyle = color
-    _.font = '"Roboto mono" 16px'
+    _.font = `${fontSize}px ${drawConfiguration.font}`
     _.textAlign = 'center'
     _.textBaseline = 'middle'
     _.fillText(label, x + width / 2, y + height / 2)
@@ -202,20 +202,26 @@ function handleGraphCanvas(canvas) {
     UPDATE
   */
 
-  function updateGraph(globalTree, currentNodeId = 1) {
-    const { nodes, edges } = parseTree(getChildTree(globalTree, currentNodeId), width, height)
+  function updateState(globalTree) {
+    const { nodes, edges } = parseTree(getChildTree(globalTree, state.currentNodeId), width, height)
 
+    state.globalTree = globalTree
     state.nodes = nodes
     state.edges = edges
+  }
 
-    const currentNodeIndex = state.currentNodeHierarchy.indexOf(currentNodeId)
+  function goToNode(nodeId = 1) {
+    let nextNodeHierachy = nodeHierarchy.slice()
+    const currentNodeIndex = nextNodeHierachy.indexOf(nodeId)
 
     if (currentNodeIndex === -1) {
-      state.currentNodeHierarchy.push(currentNodeId)
+      nextNodeHierachy.push(nodeId)
     }
     else {
-      state.currentNodeHierarchy = state.currentNodeHierarchy.slice(0, currentNodeIndex + 1)
+      nextNodeHierachy = nextNodeHierachy.slice(0, currentNodeIndex + 1)
     }
+
+    updateNodeHierarchy(nextNodeHierachy)
   }
 
   /*
@@ -252,12 +258,12 @@ function handleGraphCanvas(canvas) {
       .find(node => x >= node.x && x <= node.x + node.width && y >= node.y && y <= node.y + node.height)
 
     if (clickedNode && clickedNode.type === 'FunctionDeclaration') {
-      updateGraph(state.globalTree, clickedNode.id)
+      goToNode(clickedNode.id)
     }
   }
 
   function handleBackButtonClick() {
-    updateGraph(state.globalTree, state.currentNodeHierarchy[state.currentNodeHierarchy.length - 2])
+    goToNode(state.globalTree, state.currentNodeHierarchy[state.currentNodeHierarchy.length - 2])
   }
 
   function registerEvents() {
@@ -293,10 +299,7 @@ function handleGraphCanvas(canvas) {
       stopped = true
       unregisterEvents()
     },
-    updateTree: globalTree => {
-      state.globalTree = globalTree
-      updateGraph(globalTree)
-    },
+    updateTree: globalTree => nodeHierarchy.length ? updateState(globalTree) : goToNode(globalTree.id),
   }
 }
 

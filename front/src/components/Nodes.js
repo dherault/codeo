@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useQuery } from 'urql'
 
 import handleGraphCanvas from '../domain/handleGraphCanvas'
@@ -10,21 +11,24 @@ const NodesQuery = `
 `
 
 function Nodes({ code, open }) {
-  // console.log('code', code)
-  const [updateTree, setUpdateTree] = useState(() => () => {})
   const canvasRef = useRef()
+  const [updateTree, setUpdateTree] = useState(() => () => {})
   const [queryResult] = useQuery({
     query: NodesQuery,
     variables: { code },
   })
+  const { pathname } = useLocation()
+  const navigate = useNavigate()
 
   useEffect(() => {
-    const { stop, updateTree } = handleGraphCanvas(canvasRef.current)
+    const nodeHierarchy = pathname.slice('/'.length).split('/').filter(x => !!x)
+    const updateNodeHierarchy = nodeHierarchy => navigate(`/${nodeHierarchy.join('/')}`)
+    const { stop, updateTree } = handleGraphCanvas(canvasRef.current, nodeHierarchy, updateNodeHierarchy)
 
     setUpdateTree(() => updateTree)
 
     return stop
-  }, [open])
+  }, [open, pathname, navigate])
 
   useEffect(() => {
     if (queryResult.data) {
