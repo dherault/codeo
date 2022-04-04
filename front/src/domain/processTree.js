@@ -1,10 +1,10 @@
-function createId(id, kind) {
-  return `${id}__${kind}`
+export function createId(kind, id) {
+  return `${kind}_${id}`
 }
 
-function processTree(tree, nodes, edges, isRoot, identifiers = []) {
-  const { id, kind } = tree
-  const _id = createId(id, kind) // enforce a string id
+export function processTree(tree, nodes, edges, isRoot, identifiers = []) {
+  const { id, kind, pos: cursor } = tree
+  const _id = createId(kind, id) // enforce a string id
   // console.log('tree', tree)
 
   switch (kind) {
@@ -27,12 +27,14 @@ function processTree(tree, nodes, edges, isRoot, identifiers = []) {
       if (isRoot) {
         nodes[_id] = {
           id: _id,
+          cursor,
           label: 'arguments',
           type: 'FunctionDeclarationArguments',
-          outputs: parameters.map(({ id, name }) => {
+          outputs: parameters.map(({ id, name, pos: cursor }) => {
             const identifier = {
-              id: createId(id, name),
+              id: createId(name.escapedText, id),
               label: name.escapedText,
+              cursor,
             }
 
             identifiers.push(identifier)
@@ -46,19 +48,22 @@ function processTree(tree, nodes, edges, isRoot, identifiers = []) {
         return _id
       }
 
-      const returnId = createId(id, 'return')
+      const returnId = createId('return', id)
 
-      nodes[id] = {
-        id,
+      nodes[_id] = {
+        id: _id,
+        cursor,
         label: name.escapedText,
         type: 'FunctionDeclaration',
-        inputs: parameters.map(({ id, name }) => ({
-          id,
+        inputs: parameters.map(({ id, name, pos: cursor }) => ({
+          id: createId(name.escapedText, id),
           label: name.escapedText,
+          cursor,
         })),
         outputs: [
           {
             id: returnId,
+            cursor,
             label: 'return',
           },
         ],
@@ -68,15 +73,17 @@ function processTree(tree, nodes, edges, isRoot, identifiers = []) {
     }
     case 'ReturnStatement': {
       const { expression } = tree
-      const returnId = createId(id, 'return')
+      const returnId = createId('return', id)
 
-      nodes[id] = {
-        id,
+      nodes[_id] = {
+        id: _id,
+        cursor,
         label: 'return',
         type: 'ReturnStatement',
         inputs: [
           {
             id: returnId,
+            cursor,
             label: 'return',
           },
         ],
@@ -84,34 +91,38 @@ function processTree(tree, nodes, edges, isRoot, identifiers = []) {
 
       if (expression) {
         const expressionReturnId = processTree(expression, nodes, edges, false, identifiers)
-        createEdge(edges, expressionReturnId, returnId)
+        createEdge(edges, returnId, expressionReturnId)
       }
 
       return returnId
     }
     case 'BinaryExpression': {
       const { left, operatorToken, right } = tree
-      const leftId = createId(id, 'left')
-      const rightId = createId(id, 'right')
-      const returnId = createId(id, 'return')
+      const leftId = createId('left', id)
+      const rightId = createId('right', id)
+      const returnId = createId('return', id)
 
-      nodes[id] = {
-        id,
+      nodes[_id] = {
+        id: _id,
+        cursor,
         label: operatorToken.kind,
         type: 'BinaryExpression',
         inputs: [
           {
             id: leftId,
+            cursor: left.pos,
             label: 'left',
           },
           {
             id: rightId,
+            cursor: right.pos,
             label: 'right',
           },
         ],
         outputs: [
           {
             id: returnId,
+            cursor,
             label: 'output',
           },
         ],
@@ -119,11 +130,11 @@ function processTree(tree, nodes, edges, isRoot, identifiers = []) {
 
       if (left) {
         const _leftId = processTree(left, nodes, edges, false, identifiers)
-        createEdge(edges, _leftId, leftId)
+        createEdge(edges, leftId, _leftId)
       }
       if (right) {
         const _rightId = processTree(right, nodes, edges, false, identifiers)
-        createEdge(edges, _rightId, rightId)
+        createEdge(edges, rightId, _rightId)
       }
 
       return returnId
@@ -145,5 +156,3 @@ function findRight(array, fn) {
 
   return null
 }
-
-export default processTree

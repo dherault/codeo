@@ -14,6 +14,8 @@
     "@urql/devtools": "^2.0.3",
     "@urql/exchange-graphcache": "^4.3.6",
     "@urql/exchange-multipart-fetch": "^0.1.14",
+    "cytoscape": "^3.21.0",
+    "cytoscape-fcose": "https://github.com/iVis-at-Bilkent/cytoscape.js-fcose.git#unstable",
     "dat.gui": "^0.7.9",
     "flexpad": "^3.0.0",
     "graphql": "^16.3.0",

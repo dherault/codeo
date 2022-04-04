@@ -1,5 +1,5 @@
 import getCanvasDpr from './getCanvasDpr'
-import processTree from './processTree'
+import { createId, processTree } from './processTree'
 import positionGraph from './positionGraph'
 
 function handleGraphCanvas(canvas, nodeHierarchy, updateNodeHierarchy) {
@@ -54,13 +54,15 @@ function handleGraphCanvas(canvas, nodeHierarchy, updateNodeHierarchy) {
     }),
   }
 
+  const currentNodeIdArray = nodeHierarchy.length ? nodeHierarchy[nodeHierarchy.length - 1].split('_') : null
+
   const state = {
     globalTree: null,
-    currentNodeId: parseInt(nodeHierarchy[nodeHierarchy.length - 1]),
+    currentNodeId: currentNodeIdArray ? parseInt(currentNodeIdArray[currentNodeIdArray.length - 1]) : null,
     nodes: {},
     edges: {},
     registeredClickHandlers: [
-      { rect: drawConfiguration.backButton, handler: handleBackButtonClick, condition: state => state.currentNodeHierarchy.length > 1 },
+      { rect: drawConfiguration.backButton, handler: handleBackButtonClick, condition: () => nodeHierarchy.length > 1 },
     ],
   }
 
@@ -202,15 +204,17 @@ function handleGraphCanvas(canvas, nodeHierarchy, updateNodeHierarchy) {
     UPDATE
   */
 
-  function updateState(globalTree) {
+  async function updateState(globalTree) {
     const { nodes, edges } = parseTree(getChildTree(globalTree, state.currentNodeId), width, height)
 
+    const { nodes: layoutNodes, edges: layoutEdges } = await positionGraph(nodes, edges, width, height)
+
     state.globalTree = globalTree
-    state.nodes = nodes
-    state.edges = edges
+    state.nodes = layoutNodes
+    state.edges = layoutEdges
   }
 
-  function goToNode(nodeId = 1) {
+  function goToNode(nodeId) {
     let nextNodeHierachy = nodeHierarchy.slice()
     const currentNodeIndex = nextNodeHierachy.indexOf(nodeId)
 
@@ -263,7 +267,7 @@ function handleGraphCanvas(canvas, nodeHierarchy, updateNodeHierarchy) {
   }
 
   function handleBackButtonClick() {
-    goToNode(state.globalTree, state.currentNodeHierarchy[state.currentNodeHierarchy.length - 2])
+    goToNode(nodeHierarchy[nodeHierarchy.length - 2])
   }
 
   function registerEvents() {
@@ -299,16 +303,15 @@ function handleGraphCanvas(canvas, nodeHierarchy, updateNodeHierarchy) {
       stopped = true
       unregisterEvents()
     },
-    updateTree: globalTree => nodeHierarchy.length ? updateState(globalTree) : goToNode(globalTree.id),
+    updateTree: globalTree => nodeHierarchy.length ? updateState(globalTree) : goToNode(createId(globalTree.kind, globalTree.id)),
   }
 }
 
-function parseTree(tree, width, height) {
+function parseTree(tree) {
   const nodes = {}
   const edges = {}
 
   processTree(tree, nodes, edges, true)
-  positionGraph(nodes, edges, width, height)
 
   return { nodes, edges }
 }
