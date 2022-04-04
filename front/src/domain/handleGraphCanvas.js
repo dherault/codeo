@@ -63,6 +63,8 @@ function handleGraphCanvas(canvas, nodeHierarchy, updateNodeHierarchy) {
     dragDistance: false,
     nodes: {},
     edges: {},
+    nodesArray: [],
+    edgesArray: [],
     registeredClickHandlers: [
       { rect: drawConfiguration.backButton, handler: handleBackButtonClick, condition: () => nodeHierarchy.length > 1 },
     ],
@@ -78,7 +80,7 @@ function handleGraphCanvas(canvas, nodeHierarchy, updateNodeHierarchy) {
     _.fillStyle = drawConfiguration.backgroundColor
     _.fillRect(0, 0, width, height)
 
-    Object.values(state.nodes).forEach(drawNode)
+    state.nodesArray.forEach(drawNode)
     Object.entries(state.edges).forEach(([inId, outIds]) => outIds.forEach(outId => drawEdge(inId, outId)))
 
     if (nodeHierarchy.length > 1) drawBackButton()
@@ -131,16 +133,20 @@ function handleGraphCanvas(canvas, nodeHierarchy, updateNodeHierarchy) {
 
     heightCursor += 2 * labelPaddingVertical + 1.5 * labelFontSize
 
-    inputs.forEach(({ label }, index) => {
+    inputs.forEach(({ id, label }, index) => {
       let x = ioCircleHorizontalPadding + ioCircleRadius
       const y = heightCursor + index * ioHeight
 
       _.beginPath()
       _.arc(x, y, ioCircleRadius, 0, 2 * Math.PI)
       _.closePath()
-      _.strokeStyle = ioCircleColor
       _.lineWidth = ioCircleStrokeWidth
+      _.strokeStyle = ioCircleColor
       _.stroke()
+      if (state.edgesArray.includes(id)) {
+        _.fillStyle = ioCircleColor
+        _.fill()
+      }
 
       x += ioCircleRadius + ioCircleHorizontalPadding + ioLabelPadding
 
@@ -151,7 +157,7 @@ function handleGraphCanvas(canvas, nodeHierarchy, updateNodeHierarchy) {
       _.fillText(label, x, y)
     })
 
-    outputs.forEach(({ label }, index) => {
+    outputs.forEach(({ id, label }, index) => {
       let x = width - (ioCircleHorizontalPadding + ioCircleRadius)
       const y = heightCursor + index * ioHeight
 
@@ -160,7 +166,12 @@ function handleGraphCanvas(canvas, nodeHierarchy, updateNodeHierarchy) {
       _.closePath()
       _.strokeStyle = ioCircleColor
       _.lineWidth = ioCircleStrokeWidth
+      _.strokeStyle = ioCircleColor
       _.stroke()
+      if (state.edgesArray.includes(id)) {
+        _.fillStyle = ioCircleColor
+        _.fill()
+      }
 
       x -= ioCircleRadius + ioCircleHorizontalPadding + ioLabelPadding
 
@@ -176,14 +187,14 @@ function handleGraphCanvas(canvas, nodeHierarchy, updateNodeHierarchy) {
 
   function drawEdge(inId, outId) {
     const { strokeWidth, strokeColor } = drawConfiguration.edge
-    const { x: inX, y: inY } = findEdgeExtremityPosition(state.nodes, inId, drawConfiguration.node)
-    const { x: outX, y: outY } = findEdgeExtremityPosition(state.nodes, outId, drawConfiguration.node)
+    const { x: inX, y: inY } = findEdgeExtremityPosition(state.nodesArray, inId, drawConfiguration.node)
+    const { x: outX, y: outY } = findEdgeExtremityPosition(state.nodesArray, outId, drawConfiguration.node)
 
     _.beginPath()
     _.moveTo(inX, inY)
-    _.lineTo(outX, outY)
-    _.strokeStyle = strokeColor
+    _.bezierCurveTo((inX + outX) / 2, inY, (inX + outX) / 2, outY, outX, outY)
     _.lineWidth = strokeWidth
+    _.strokeStyle = strokeColor
     _.stroke()
   }
 
@@ -192,7 +203,6 @@ function handleGraphCanvas(canvas, nodeHierarchy, updateNodeHierarchy) {
   }
 
   function drawButton({ x, y, width, height, color, backgroundColor, label, fontSize }) {
-
     _.fillStyle = backgroundColor
     _.fillRect(x, y, width, height)
     _.fillStyle = color
@@ -214,6 +224,8 @@ function handleGraphCanvas(canvas, nodeHierarchy, updateNodeHierarchy) {
     state.globalTree = globalTree
     state.nodes = layoutNodes
     state.edges = layoutEdges
+    state.nodesArray = Object.values(layoutNodes)
+    state.edgesArray = [...new Set(Object.entries(layoutEdges).flat(2))]
   }
 
   function goToNode(nodeId) {
@@ -386,8 +398,8 @@ function normalizeRect({ top, left, right, bottom, width, height, ...props }) {
   }
 }
 
-function findEdgeExtremityPosition(nodes, id, nodeDrawConfiguration) {
-  for (const node of Object.values(nodes)) {
+function findEdgeExtremityPosition(nodesArray, id, nodeDrawConfiguration) {
+  for (const node of nodesArray) {
     const { inputs = [], outputs = [] } = node
 
     const foundInputIndex = inputs.findIndex(input => input.id === id)
@@ -409,8 +421,7 @@ function findEdgeExtremityPosition(nodes, id, nodeDrawConfiguration) {
     }
   }
 
-  console.log('nodes', Object.values(nodes))
-  console.log('typeof id', typeof id)
+  console.log('nodes', nodesArray)
 
   throw new Error(`Edge extremity not found: ${id}`)
 }
