@@ -59,6 +59,8 @@ function handleGraphCanvas(canvas, nodeHierarchy, updateNodeHierarchy) {
   const state = {
     globalTree: null,
     currentNodeId: currentNodeIdArray ? parseInt(currentNodeIdArray[currentNodeIdArray.length - 1]) : null,
+    draggedNodeId: null,
+    dragDistance: false,
     nodes: {},
     edges: {},
     registeredClickHandlers: [
@@ -232,20 +234,30 @@ function handleGraphCanvas(canvas, nodeHierarchy, updateNodeHierarchy) {
     EVENTS
   */
 
-  function handleMouseDown() {
-
-  }
-
-  function handleMouseMove() {
-
-  }
-
-  function handleClick(event) {
+  function handleMouseDown(event) {
     const x = (event.clientX - rect.left) * dpr
     const y = (event.clientY - rect.top) * dpr
 
-    // console.log('x, y', x, y)
-    // console.log('x, y', state.nodes)
+    const clikedNode = Object
+      .values(state.nodes)
+      .find(node => x >= node.x && x <= node.x + node.width && y >= node.y && y <= node.y + node.height)
+
+    if (clikedNode) {
+      state.draggedNodeId = clikedNode.id
+      state.dragDistance = 0
+    }
+  }
+
+  function handleMouseUp(event) {
+    if (state.draggedNodeId && state.dragDistance > 4) {
+      state.draggedNodeId = null
+      canvas.style.cursor = 'grab'
+
+      return
+    }
+
+    const x = (event.clientX - rect.left) * dpr
+    const y = (event.clientY - rect.top) * dpr
 
     const clickedButton = state.registeredClickHandlers.find(({ rect }) => x >= rect.x && x <= rect.x + rect.width && y >= rect.y && y <= rect.y + rect.height)
 
@@ -266,19 +278,50 @@ function handleGraphCanvas(canvas, nodeHierarchy, updateNodeHierarchy) {
     }
   }
 
+  function handleMouseEnter(event) {
+    if (event.buttons !== 1) {
+      state.draggedNodeId = null
+    }
+  }
+
+  function handleMouseMove(event) {
+    const x = (event.clientX - rect.left) * dpr
+    const y = (event.clientY - rect.top) * dpr
+
+    if (state.draggedNodeId) {
+      const draggedNode = state.nodes[state.draggedNodeId]
+
+      draggedNode.x += event.movementX * dpr
+      draggedNode.y += event.movementY * dpr
+      state.dragDistance += (Math.abs(event.movementX) + Math.abs(event.movementY)) * dpr
+
+      canvas.style.cursor = 'grabbing'
+
+      return
+    }
+
+    const hoveredNode = Object
+      .values(state.nodes)
+      .find(node => x >= node.x && x <= node.x + node.width && y >= node.y && y <= node.y + node.height)
+
+    canvas.style.cursor = hoveredNode ? 'grab' : 'pointer'
+  }
+
   function handleBackButtonClick() {
     goToNode(nodeHierarchy[nodeHierarchy.length - 2])
   }
 
   function registerEvents() {
     canvas.addEventListener('mousedown', handleMouseDown)
+    canvas.addEventListener('mouseup', handleMouseUp)
+    canvas.addEventListener('mouseenter', handleMouseEnter)
     canvas.addEventListener('mousemove', handleMouseMove)
-    canvas.addEventListener('click', handleClick)
 
     return () => {
       canvas.removeEventListener('mousedown', handleMouseDown)
+      canvas.removeEventListener('mouseup', handleMouseUp)
+      canvas.removeEventListener('mouseenter', handleMouseEnter)
       canvas.removeEventListener('mousemove', handleMouseMove)
-      canvas.removeEventListener('click', handleClick)
     }
   }
 
