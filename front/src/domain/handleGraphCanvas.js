@@ -16,7 +16,12 @@ function handleGraphCanvas(canvas, nodeHierarchy, updateNodeHierarchy) {
   _.scale(dpr, dpr)
 
   /*
-    CONFIG AND STATE
+    ███████╗████████╗ █████╗ ████████╗███████╗
+    ██╔════╝╚══██╔══╝██╔══██╗╚══██╔══╝██╔════╝
+    ███████╗   ██║   ███████║   ██║   █████╗
+    ╚════██║   ██║   ██╔══██║   ██║   ██╔══╝
+    ███████║   ██║   ██║  ██║   ██║   ███████╗
+    ╚══════╝   ╚═╝   ╚═╝  ╚═╝   ╚═╝   ╚══════╝
   */
 
   const drawConfiguration = {
@@ -121,7 +126,7 @@ function handleGraphCanvas(canvas, nodeHierarchy, updateNodeHierarchy) {
       labelFontSize,
       labelPaddingVertical,
       labelPaddingHorizontal,
-      ioSpacing,
+      // ioSpacing,
       ioVerticalPadding,
       ioCircleRadius,
       ioCircleStrokeWidth,
