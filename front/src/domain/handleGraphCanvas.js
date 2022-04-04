@@ -42,16 +42,28 @@ function handleGraphCanvas(canvas, nodeHierarchy, updateNodeHierarchy) {
       strokeWidth: 2 * dpr,
       strokeColor: '#FFCC4A',
     },
-    backButton: normalizeRect({
-      y: 16,
-      x: 16,
-      width: 128,
-      height: 64,
-      color: 'white',
-      backgroundColor: 'royalblue',
-      label: 'Back',
-      fontSize: 16 * dpr,
-    }),
+    buttons: {
+      back: normalizeRect({
+        y: 16,
+        x: 16,
+        width: 128,
+        height: 64,
+        color: 'white',
+        backgroundColor: 'royalblue',
+        label: 'Back',
+        fontSize: 16 * dpr,
+      }),
+      recomputeLayout: normalizeRect({
+        x: 16,
+        bottom: 16,
+        width: 256,
+        height: 64,
+        color: 'white',
+        backgroundColor: 'royalblue',
+        label: 'Recompute layout',
+        fontSize: 12 * dpr,
+      }),
+    },
   }
 
   const currentNodeIdArray = nodeHierarchy.length ? nodeHierarchy[nodeHierarchy.length - 1].split('_') : null
@@ -65,8 +77,9 @@ function handleGraphCanvas(canvas, nodeHierarchy, updateNodeHierarchy) {
     edges: {},
     nodesArray: [],
     edgesArray: [],
-    registeredClickHandlers: [
-      { rect: drawConfiguration.backButton, handler: handleBackButtonClick, condition: () => nodeHierarchy.length > 1 },
+    buttons: [
+      { rect: drawConfiguration.buttons.back, handler: handleBackButtonClick, conditionFn: () => nodeHierarchy.length > 1 },
+      { rect: drawConfiguration.buttons.recomputeLayout, handler: handleRecomputeLayoutClick, conditionFn: () => true },
     ],
   }
 
@@ -83,7 +96,9 @@ function handleGraphCanvas(canvas, nodeHierarchy, updateNodeHierarchy) {
     state.nodesArray.forEach(drawNode)
     Object.entries(state.edges).forEach(([inId, outIds]) => outIds.forEach(outId => drawEdge(inId, outId)))
 
-    if (nodeHierarchy.length > 1) drawBackButton()
+    state.buttons.forEach(({ conditionFn, rect }) => {
+      if (conditionFn()) drawButton(rect)
+    })
   }
 
   function drawNode(node) {
@@ -198,10 +213,6 @@ function handleGraphCanvas(canvas, nodeHierarchy, updateNodeHierarchy) {
     _.stroke()
   }
 
-  function drawBackButton() {
-    drawButton(drawConfiguration.backButton)
-  }
-
   function drawButton({ x, y, width, height, color, backgroundColor, label, fontSize }) {
     _.fillStyle = backgroundColor
     _.fillRect(x, y, width, height)
@@ -218,14 +229,31 @@ function handleGraphCanvas(canvas, nodeHierarchy, updateNodeHierarchy) {
 
   async function updateState(globalTree) {
     const { nodes, edges } = parseTree(getChildTree(globalTree, state.currentNodeId), width, height)
+    const restoredNodes = restoreGraph()
 
-    const { nodes: layoutNodes, edges: layoutEdges } = await positionGraph(nodes, edges, width, height)
+    let layoutNodes
+    let layoutEdges
+
+    if (restoredNodes) {
+      layoutNodes = nodes
+      layoutEdges = edges
+
+      Object.values(restoredNodes).forEach(node => {
+        layoutNodes[node.id].x = node.x
+        layoutNodes[node.id].y = node.y
+      })
+    }
+    else {
+      ({ nodes: layoutNodes, edges: layoutEdges } = await positionGraph(nodes, edges, width, height))
+    }
 
     state.globalTree = globalTree
     state.nodes = layoutNodes
     state.edges = layoutEdges
     state.nodesArray = Object.values(layoutNodes)
     state.edgesArray = [...new Set(Object.entries(layoutEdges).flat(2))]
+
+    persistGraph()
   }
 
   function goToNode(nodeId) {
@@ -240,6 +268,37 @@ function handleGraphCanvas(canvas, nodeHierarchy, updateNodeHierarchy) {
     }
 
     updateNodeHierarchy(nextNodeHierachy)
+  }
+
+  /*
+    PERSISTANCE
+  */
+
+  const localStorageKey = `graph-${nodeHierarchy.join('/')}`
+
+  function persistGraph() {
+    localStorage.setItem(localStorageKey, JSON.stringify(state.nodes))
+  }
+
+  function restoreGraph() {
+    const nodeJson = localStorage.getItem(localStorageKey)
+
+    if (nodeJson) {
+      try {
+        return JSON.parse(nodeJson)
+      }
+      catch (error) {
+        console.log('Error while parsing graph from localStorage', error)
+
+        return null
+      }
+    }
+
+    return null
+  }
+
+  function clearPersistance() {
+    localStorage.removeItem(localStorageKey)
   }
 
   /*
@@ -265,18 +324,20 @@ function handleGraphCanvas(canvas, nodeHierarchy, updateNodeHierarchy) {
       state.draggedNodeId = null
       canvas.style.cursor = 'grab'
 
+      persistGraph()
+
       return
     }
 
     const x = (event.clientX - rect.left) * dpr
     const y = (event.clientY - rect.top) * dpr
 
-    const clickedButton = state.registeredClickHandlers.find(({ rect }) => x >= rect.x && x <= rect.x + rect.width && y >= rect.y && y <= rect.y + rect.height)
+    const clickedButton = state.buttons.find(({ rect }) => x >= rect.x && x <= rect.x + rect.width && y >= rect.y && y <= rect.y + rect.height)
 
     if (
       clickedButton
       && typeof clickedButton.handler === 'function'
-      && (typeof clickedButton.condition === 'function' ? clickedButton.condition(state) : true)
+      && (typeof clickedButton.conditionFn === 'function' ? clickedButton.conditionFn(state) : true)
     ) {
       return clickedButton.handler()
     }
@@ -323,6 +384,11 @@ function handleGraphCanvas(canvas, nodeHierarchy, updateNodeHierarchy) {
     goToNode(nodeHierarchy[nodeHierarchy.length - 2])
   }
 
+  function handleRecomputeLayoutClick() {
+    clearPersistance()
+    updateState(state.globalTree)
+  }
+
   function registerEvents() {
     canvas.addEventListener('mousedown', handleMouseDown)
     canvas.addEventListener('mouseup', handleMouseUp)
@@ -334,6 +400,25 @@ function handleGraphCanvas(canvas, nodeHierarchy, updateNodeHierarchy) {
       canvas.removeEventListener('mouseup', handleMouseUp)
       canvas.removeEventListener('mouseenter', handleMouseEnter)
       canvas.removeEventListener('mousemove', handleMouseMove)
+    }
+  }
+
+  /*
+    HELPERS
+  */
+
+  function normalizeRect({ top, left, right, bottom, width: rectWidth, height: rectHeight, ...props }) {
+    const _top = typeof top === 'undefined' ? height - bottom - rectHeight : top
+    const _left = typeof left === 'undefined' ? width - right - rectWidth : left
+    const _width = typeof width === 'undefined' ? right - _left : rectWidth
+    const _height = typeof height === 'undefined' ? bottom - _top : rectHeight
+
+    return {
+      y: _top,
+      x: _left,
+      width: _width,
+      height: _height,
+      ...props,
     }
   }
 
@@ -381,21 +466,6 @@ function getChildTree(tree, nodeId) {
   }
 
   return null
-}
-
-function normalizeRect({ top, left, right, bottom, width, height, ...props }) {
-  const _top = typeof top === 'undefined' ? bottom - height : top
-  const _left = typeof left === 'undefined' ? right - width : left
-  const _width = typeof width === 'undefined' ? right - _left : width
-  const _height = typeof height === 'undefined' ? bottom - _top : height
-
-  return {
-    y: _top,
-    x: _left,
-    width: _width,
-    height: _height,
-    ...props,
-  }
 }
 
 function findEdgeExtremityPosition(nodesArray, id, nodeDrawConfiguration) {
