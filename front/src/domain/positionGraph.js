@@ -13,6 +13,8 @@ async function positionGraph(nodes, edges, width, height) {
     })
   })
 
+  // console.log('edges', edges)
+
   const sortedNodeIds = Object.values(nodes)
     .map(({ inputs = [], outputs = [] }) => [...inputs.map(x => x.id), ...outputs.map(x => x.id)])
     .flat()
@@ -23,23 +25,23 @@ async function positionGraph(nodes, edges, width, height) {
     styleEnabled: false,
     animate: false,
     elements: [
-      ...Object.values(nodes).map(node => [
-        ...(node.inputs || []).map(input => ({
+      ...Object.values(nodes).map(({ id, inputs = [], outputs = [] }) => [
+        ...inputs.map(input => ({
           data: {
             group: 'nodes',
             id: input.id,
-            nodeId: node.id,
-            width: node.width / 2,
-            height: node.height / node.inputs.length,
+            nodeId: id,
+            // width: node.width / 2,
+            // height: node.height / node.inputs.length,
           },
         })),
-        ...(node.outputs || []).map(output => ({
+        ...outputs.map(output => ({
           data: {
             group: 'nodes',
             id: output.id,
-            nodeId: node.id,
-            width: node.width / 2,
-            height: node.height / node.outputs.length,
+            nodeId: id,
+            // width: node.width / 2,
+            // height: node.height / node.outputs.length,
           },
         })),
       ]).flat(),
@@ -57,8 +59,8 @@ async function positionGraph(nodes, edges, width, height) {
         selector: 'node',
         style: {
           shape: 'rectangle',
-          width: 'data(width)',
-          height: 'data(height)',
+          // width: 'data(width)',
+          // height: 'data(height)',
         },
       },
     ],
@@ -70,14 +72,14 @@ async function positionGraph(nodes, edges, width, height) {
 
   const promise = new Promise(resolve => {
     cy.one('layoutstop', () => {
-      const n = {}
+      const layoutNodes = {}
 
       let minX = Infinity
       let maxX = -Infinity
       let minY = Infinity
       let maxY = -Infinity
 
-      cy.nodes().forEach((node, id) => {
+      cy.nodes().forEach(node => {
         const data = node.data()
         const { x, y } = node.position()
 
@@ -86,26 +88,27 @@ async function positionGraph(nodes, edges, width, height) {
         if (y < minY) minY = y
         if (y > maxY) maxY = y
 
+        // console.log('data.nodeId', data.nodeId, nodes)
         const foundNode = nodes[data.nodeId]
 
-        n[foundNode.id] = {
+        layoutNodes[foundNode.id] = {
           ...foundNode,
           x,
           y,
         }
       })
 
-      const deltaX = maxX - minX
-      const deltaY = maxY - minY
-      const deltaLeft = (width - deltaX) / 2
-      const deltaTop = (height - deltaY) / 2
+      const paddingRatio = 0.09
 
-      Object.values(n).forEach(node => {
-        node.x += deltaLeft - minX / 2
-        node.y += deltaTop - minY / 2
+      resolve({
+        nodes: layoutNodes,
+        rawViewBox: {
+          minX: minX - paddingRatio * width,
+          maxX: maxX + paddingRatio * width,
+          minY: minY - paddingRatio * height,
+          maxY: maxY + paddingRatio * height,
+        },
       })
-
-      resolve({ nodes: n, edges })
     })
   })
 
@@ -118,10 +121,10 @@ async function positionGraph(nodes, edges, width, height) {
       h: height,
     },
     fit: true,
-    animate: null,
+    // padding: 1000,
+    animate: false,
     quality: 'default',
     randomize: true,
-    // padding: 512,
     // nodeRepulsion: () => 1000,
     // idealEdgeLength: () => 1024,
     relativePlacementConstraint: [

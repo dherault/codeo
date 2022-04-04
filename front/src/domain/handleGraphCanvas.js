@@ -69,6 +69,12 @@ function handleGraphCanvas(canvas, nodeHierarchy, updateNodeHierarchy) {
   const currentNodeIdArray = nodeHierarchy.length ? nodeHierarchy[nodeHierarchy.length - 1].split('_') : null
 
   const state = {
+    rawViewBox: {
+      minX: 0,
+      maxX: width,
+      minY: 0,
+      maxY: height,
+    },
     globalTree: null,
     currentNodeId: currentNodeIdArray ? parseInt(currentNodeIdArray[currentNodeIdArray.length - 1]) : null,
     draggedNodeId: null,
@@ -83,10 +89,13 @@ function handleGraphCanvas(canvas, nodeHierarchy, updateNodeHierarchy) {
     ],
   }
 
-  window.state = state
-
   /*
-    DRAW
+    ██████╗ ██████╗  █████╗ ██╗    ██╗
+    ██╔══██╗██╔══██╗██╔══██╗██║    ██║
+    ██║  ██║██████╔╝███████║██║ █╗ ██║
+    ██║  ██║██╔══██╗██╔══██║██║███╗██║
+    ██████╔╝██║  ██║██║  ██║╚███╔███╔╝
+    ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝ ╚══╝╚══╝
   */
 
   function draw() {
@@ -103,6 +112,8 @@ function handleGraphCanvas(canvas, nodeHierarchy, updateNodeHierarchy) {
 
   function drawNode(node) {
     const { x = 0, y = 0, label = '', inputs = [], outputs = [] } = node
+    const { zoom, deltaX, deltaY } = getViewBox()
+
     const {
       radius,
       backgroundColor,
@@ -130,6 +141,8 @@ function handleGraphCanvas(canvas, nodeHierarchy, updateNodeHierarchy) {
 
     let heightCursor = 0
 
+    _.scale(zoom, zoom)
+    _.translate(deltaX, deltaY)
     _.translate(x, y)
     _.beginPath()
     _.moveTo(width, height)
@@ -201,16 +214,20 @@ function handleGraphCanvas(canvas, nodeHierarchy, updateNodeHierarchy) {
   }
 
   function drawEdge(inId, outId) {
+    const { zoom, deltaX, deltaY } = getViewBox()
     const { strokeWidth, strokeColor } = drawConfiguration.edge
     const { x: inX, y: inY } = findEdgeExtremityPosition(state.nodesArray, inId, drawConfiguration.node)
     const { x: outX, y: outY } = findEdgeExtremityPosition(state.nodesArray, outId, drawConfiguration.node)
 
+    _.scale(zoom, zoom)
+    _.translate(deltaX, deltaY)
     _.beginPath()
     _.moveTo(inX, inY)
     _.bezierCurveTo((inX + outX) / 2, inY, (inX + outX) / 2, outY, outX, outY)
     _.lineWidth = strokeWidth
     _.strokeStyle = strokeColor
     _.stroke()
+    _.setTransform(1, 0, 0, 1, 0, 0)
   }
 
   function drawButton({ x, y, width, height, color, backgroundColor, label, fontSize }) {
@@ -224,34 +241,40 @@ function handleGraphCanvas(canvas, nodeHierarchy, updateNodeHierarchy) {
   }
 
   /*
-    UPDATE
+    ██╗   ██╗██████╗ ██████╗  █████╗ ████████╗███████╗
+    ██║   ██║██╔══██╗██╔══██╗██╔══██╗╚══██╔══╝██╔════╝
+    ██║   ██║██████╔╝██║  ██║███████║   ██║   █████╗
+    ██║   ██║██╔═══╝ ██║  ██║██╔══██║   ██║   ██╔══╝
+    ╚██████╔╝██║     ██████╔╝██║  ██║   ██║   ███████╗
+     ╚═════╝ ╚═╝     ╚═════╝ ╚═╝  ╚═╝   ╚═╝   ╚══════╝
   */
 
   async function updateState(globalTree) {
-    const { nodes, edges } = parseTree(getChildTree(globalTree, state.currentNodeId), width, height)
-    const restoredNodes = restoreGraph()
-
-    let layoutNodes
-    let layoutEdges
+    const graph = parseTree(getChildTree(globalTree, state.currentNodeId), width, height)
+    let { nodes } = graph
+    const { edges } = graph
+    const { nodes: restoredNodes, rawViewBox: restoredRawViewBox } = restoreGraph() || {}
 
     if (restoredNodes) {
-      layoutNodes = nodes
-      layoutEdges = edges
-
       Object.values(restoredNodes).forEach(node => {
-        layoutNodes[node.id].x = node.x
-        layoutNodes[node.id].y = node.y
+        nodes[node.id].x = node.x
+        nodes[node.id].y = node.y
       })
+      state.rawViewBox = restoredRawViewBox
     }
     else {
-      ({ nodes: layoutNodes, edges: layoutEdges } = await positionGraph(nodes, edges, width, height))
+      const { nodes: layoutNodes, rawViewBox } = await positionGraph(nodes, edges, width, height)
+
+      console.log('rawViewBox', rawViewBox)
+      nodes = layoutNodes
+      state.rawViewBox = rawViewBox
     }
 
     state.globalTree = globalTree
-    state.nodes = layoutNodes
-    state.edges = layoutEdges
-    state.nodesArray = Object.values(layoutNodes)
-    state.edgesArray = [...new Set(Object.entries(layoutEdges).flat(2))]
+    state.nodes = nodes
+    state.edges = edges
+    state.nodesArray = Object.values(nodes)
+    state.edgesArray = [...new Set(Object.entries(edges).flat(2))]
 
     persistGraph()
   }
@@ -271,21 +294,28 @@ function handleGraphCanvas(canvas, nodeHierarchy, updateNodeHierarchy) {
   }
 
   /*
-    PERSISTANCE
+    ██████╗ ███████╗██████╗ ███████╗██╗███████╗████████╗ █████╗ ███╗   ██╗ ██████╗███████╗
+    ██╔══██╗██╔════╝██╔══██╗██╔════╝██║██╔════╝╚══██╔══╝██╔══██╗████╗  ██║██╔════╝██╔════╝
+    ██████╔╝█████╗  ██████╔╝███████╗██║███████╗   ██║   ███████║██╔██╗ ██║██║     █████╗
+    ██╔═══╝ ██╔══╝  ██╔══██╗╚════██║██║╚════██║   ██║   ██╔══██║██║╚██╗██║██║     ██╔══╝
+    ██║     ███████╗██║  ██║███████║██║███████║   ██║   ██║  ██║██║ ╚████║╚██████╗███████╗
+    ╚═╝     ╚══════╝╚═╝  ╚═╝╚══════╝╚═╝╚══════╝   ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═══╝ ╚═════╝╚══════╝
   */
 
   const localStorageKey = `graph-${nodeHierarchy.join('/')}`
 
   function persistGraph() {
-    localStorage.setItem(localStorageKey, JSON.stringify(state.nodes))
+    const { nodes, rawViewBox } = state
+
+    localStorage.setItem(localStorageKey, JSON.stringify({ nodes, rawViewBox }))
   }
 
   function restoreGraph() {
-    const nodeJson = localStorage.getItem(localStorageKey)
+    const restoredJson = localStorage.getItem(localStorageKey)
 
-    if (nodeJson) {
+    if (restoredJson) {
       try {
-        return JSON.parse(nodeJson)
+        return JSON.parse(restoredJson)
       }
       catch (error) {
         console.log('Error while parsing graph from localStorage', error)
@@ -302,12 +332,18 @@ function handleGraphCanvas(canvas, nodeHierarchy, updateNodeHierarchy) {
   }
 
   /*
-    EVENTS
+    ███████╗██╗   ██╗███████╗███╗   ██╗████████╗███████╗
+    ██╔════╝██║   ██║██╔════╝████╗  ██║╚══██╔══╝██╔════╝
+    █████╗  ██║   ██║█████╗  ██╔██╗ ██║   ██║   ███████╗
+    ██╔══╝  ╚██╗ ██╔╝██╔══╝  ██║╚██╗██║   ██║   ╚════██║
+    ███████╗ ╚████╔╝ ███████╗██║ ╚████║   ██║   ███████║
+    ╚══════╝  ╚═══╝  ╚══════╝╚═╝  ╚═══╝   ╚═╝   ╚══════╝
   */
 
   function handleMouseDown(event) {
-    const x = (event.clientX - rect.left) * dpr
-    const y = (event.clientY - rect.top) * dpr
+    const { zoom, deltaX, deltaY } = getViewBox()
+    const x = (event.clientX - rect.left) * dpr / zoom - deltaX
+    const y = (event.clientY - rect.top) * dpr / zoom - deltaY
 
     const clikedNode = Object
       .values(state.nodes)
@@ -329,8 +365,8 @@ function handleGraphCanvas(canvas, nodeHierarchy, updateNodeHierarchy) {
       return
     }
 
-    const x = (event.clientX - rect.left) * dpr
-    const y = (event.clientY - rect.top) * dpr
+    let x = (event.clientX - rect.left) * dpr
+    let y = (event.clientY - rect.top) * dpr
 
     const clickedButton = state.buttons.find(({ rect }) => x >= rect.x && x <= rect.x + rect.width && y >= rect.y && y <= rect.y + rect.height)
 
@@ -342,9 +378,12 @@ function handleGraphCanvas(canvas, nodeHierarchy, updateNodeHierarchy) {
       return clickedButton.handler()
     }
 
-    const clickedNode = Object
-      .values(state.nodes)
-      .find(node => x >= node.x && x <= node.x + node.width && y >= node.y && y <= node.y + node.height)
+    const { zoom, deltaX, deltaY } = getViewBox()
+
+    x = x / zoom - deltaX
+    y = y / zoom - deltaY
+
+    const clickedNode = state.nodesArray.find(node => x >= node.x && x <= node.x + node.width && y >= node.y && y <= node.y + node.height)
 
     if (clickedNode && clickedNode.type === 'FunctionDeclaration') {
       goToNode(clickedNode.id)
@@ -358,20 +397,21 @@ function handleGraphCanvas(canvas, nodeHierarchy, updateNodeHierarchy) {
   }
 
   function handleMouseMove(event) {
-    const x = (event.clientX - rect.left) * dpr
-    const y = (event.clientY - rect.top) * dpr
-
     if (state.draggedNodeId) {
+      const { zoom } = getViewBox()
       const draggedNode = state.nodes[state.draggedNodeId]
 
-      draggedNode.x += event.movementX * dpr
-      draggedNode.y += event.movementY * dpr
+      draggedNode.x += event.movementX * dpr / zoom
+      draggedNode.y += event.movementY * dpr / zoom
       state.dragDistance += (Math.abs(event.movementX) + Math.abs(event.movementY)) * dpr
-
       canvas.style.cursor = 'grabbing'
 
       return
     }
+
+    const { zoom, deltaX, deltaY } = getViewBox()
+    const x = (event.clientX - rect.left) * dpr / zoom - deltaX
+    const y = (event.clientY - rect.top) * dpr / zoom - deltaY
 
     const hoveredNode = Object
       .values(state.nodes)
@@ -404,7 +444,12 @@ function handleGraphCanvas(canvas, nodeHierarchy, updateNodeHierarchy) {
   }
 
   /*
-    HELPERS
+    ██╗  ██╗███████╗██╗     ██████╗ ███████╗██████╗ ███████╗
+    ██║  ██║██╔════╝██║     ██╔══██╗██╔════╝██╔══██╗██╔════╝
+    ███████║█████╗  ██║     ██████╔╝█████╗  ██████╔╝███████╗
+    ██╔══██║██╔══╝  ██║     ██╔═══╝ ██╔══╝  ██╔══██╗╚════██║
+    ██║  ██║███████╗███████╗██║     ███████╗██║  ██║███████║
+    ╚═╝  ╚═╝╚══════╝╚══════╝╚═╝     ╚══════╝╚═╝  ╚═╝╚══════╝
   */
 
   function normalizeRect({ top, left, right, bottom, width: rectWidth, height: rectHeight, ...props }) {
@@ -422,8 +467,24 @@ function handleGraphCanvas(canvas, nodeHierarchy, updateNodeHierarchy) {
     }
   }
 
+  function getViewBox() {
+    const { minX, maxX, minY, maxY } = state.rawViewBox
+    const zoom = Math.max(0.2, Math.min(1, width / (maxX - minX), height / (maxY - minY)))
+
+    return {
+      zoom,
+      deltaX: ((width - (maxX - minX)) / 2 - minX) / zoom,
+      deltaY: ((height - (maxY - minY)) / 2 - minY) / zoom,
+    }
+  }
+
   /*
-    LOOP
+    ██╗      ██████╗  ██████╗ ██████╗
+    ██║     ██╔═══██╗██╔═══██╗██╔══██╗
+    ██║     ██║   ██║██║   ██║██████╔╝
+    ██║     ██║   ██║██║   ██║██╔═══╝
+    ███████╗╚██████╔╝╚██████╔╝██║
+    ╚══════╝ ╚═════╝  ╚═════╝ ╚═╝
   */
 
   function step() {
