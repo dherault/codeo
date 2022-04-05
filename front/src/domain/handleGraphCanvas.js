@@ -84,6 +84,7 @@ function handleGraphCanvas(canvas, nodeHierarchy, updateNodeHierarchy) {
     currentNodeId: currentNodeIdArray ? parseInt(currentNodeIdArray[currentNodeIdArray.length - 1]) : null,
     draggedNodeId: null,
     dragDistance: false,
+    isPanning: false,
     nodes: {},
     edges: {},
     nodesArray: [],
@@ -270,7 +271,6 @@ function handleGraphCanvas(canvas, nodeHierarchy, updateNodeHierarchy) {
     else {
       const { nodes: layoutNodes, rawViewBox } = await positionGraph(nodes, edges, width, height)
 
-      console.log('rawViewBox', rawViewBox)
       nodes = layoutNodes
       state.rawViewBox = rawViewBox
     }
@@ -350,6 +350,10 @@ function handleGraphCanvas(canvas, nodeHierarchy, updateNodeHierarchy) {
     const x = (event.clientX - rect.left) * dpr / zoom - deltaX
     const y = (event.clientY - rect.top) * dpr / zoom - deltaY
 
+    const clickedButton = state.buttons.find(({ rect }) => x >= rect.x && x <= rect.x + rect.width && y >= rect.y && y <= rect.y + rect.height)
+
+    if (clickedButton) return
+
     const clikedNode = Object
       .values(state.nodes)
       .find(node => x >= node.x && x <= node.x + node.width && y >= node.y && y <= node.y + node.height)
@@ -357,10 +361,16 @@ function handleGraphCanvas(canvas, nodeHierarchy, updateNodeHierarchy) {
     if (clikedNode) {
       state.draggedNodeId = clikedNode.id
       state.dragDistance = 0
+
+      return
     }
+
+    state.isPanning = true
   }
 
   function handleMouseUp(event) {
+    state.isPanning = false
+
     if (state.draggedNodeId && state.dragDistance > 4) {
       state.draggedNodeId = null
       canvas.style.cursor = 'grab'
@@ -398,10 +408,20 @@ function handleGraphCanvas(canvas, nodeHierarchy, updateNodeHierarchy) {
   function handleMouseEnter(event) {
     if (event.buttons !== 1) {
       state.draggedNodeId = null
+      state.isPanning = false
     }
   }
 
   function handleMouseMove(event) {
+    if (state.isPanning) {
+      const { zoom } = getViewBox()
+
+      state.rawViewBox.dX += event.movementX * dpr / zoom
+      state.rawViewBox.dY += event.movementY * dpr / zoom
+
+      return
+    }
+
     if (state.draggedNodeId) {
       const { zoom } = getViewBox()
       const draggedNode = state.nodes[state.draggedNodeId]
@@ -425,6 +445,14 @@ function handleGraphCanvas(canvas, nodeHierarchy, updateNodeHierarchy) {
     canvas.style.cursor = hoveredNode ? 'grab' : 'pointer'
   }
 
+  function handleWheel(event) {
+    const { zoom, deltaX, deltaY } = getViewBox()
+    const x = (event.clientX - rect.left) * dpr / zoom - deltaX
+    const y = (event.clientY - rect.top) * dpr / zoom - deltaY
+
+    console.log('event', event)
+  }
+
   function handleBackButtonClick() {
     goToNode(nodeHierarchy[nodeHierarchy.length - 2])
   }
@@ -439,12 +467,14 @@ function handleGraphCanvas(canvas, nodeHierarchy, updateNodeHierarchy) {
     canvas.addEventListener('mouseup', handleMouseUp)
     canvas.addEventListener('mouseenter', handleMouseEnter)
     canvas.addEventListener('mousemove', handleMouseMove)
+    canvas.addEventListener('wheel', handleWheel)
 
     return () => {
       canvas.removeEventListener('mousedown', handleMouseDown)
       canvas.removeEventListener('mouseup', handleMouseUp)
       canvas.removeEventListener('mouseenter', handleMouseEnter)
       canvas.removeEventListener('mousemove', handleMouseMove)
+      canvas.removeEventListener('wheel', handleWheel)
     }
   }
 
@@ -473,13 +503,13 @@ function handleGraphCanvas(canvas, nodeHierarchy, updateNodeHierarchy) {
   }
 
   function getViewBox() {
-    const { minX, maxX, minY, maxY } = state.rawViewBox
-    const zoom = Math.max(0.2, Math.min(1, width / (maxX - minX), height / (maxY - minY)))
+    const { minX, maxX, minY, maxY, dX, dY, zoomRatio } = state.rawViewBox
+    const zoom = Math.max(0.2, Math.min(1, zoomRatio * width / (maxX - minX), zoomRatio * height / (maxY - minY)))
 
     return {
       zoom,
-      deltaX: ((width - (maxX - minX)) / 2 - minX) / zoom,
-      deltaY: ((height - (maxY - minY)) / 2 - minY) / zoom,
+      deltaX: ((width - (maxX - minX)) / 2 - minX) / zoom + dX,
+      deltaY: ((height - (maxY - minY)) / 2 - minY) / zoom + dY,
     }
   }
 

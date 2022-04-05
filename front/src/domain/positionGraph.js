@@ -98,7 +98,7 @@ async function positionGraph(nodes, edges, width, height) {
         }
       })
 
-      const paddingRatio = 0.09
+      const paddingRatio = 0.1
 
       resolve({
         nodes: layoutNodes,
@@ -107,6 +107,9 @@ async function positionGraph(nodes, edges, width, height) {
           maxX: maxX + paddingRatio * width,
           minY: minY - paddingRatio * height,
           maxY: maxY + paddingRatio * height,
+          dX: 0,
+          dY: 0,
+          zoomRatio: 1,
         },
       })
     })
