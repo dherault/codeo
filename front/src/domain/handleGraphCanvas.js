@@ -446,11 +446,14 @@ function handleGraphCanvas(canvas, nodeHierarchy, updateNodeHierarchy) {
   }
 
   function handleWheel(event) {
+    const { dX, dY, zoomRatio } = state.rawViewBox
     const { zoom, deltaX, deltaY } = getViewBox()
     const x = (event.clientX - rect.left) * dpr / zoom - deltaX
     const y = (event.clientY - rect.top) * dpr / zoom - deltaY
 
-    console.log('event', event)
+    const nextZoomRatio = Math.max(0.2, Math.min(5, zoomRatio * (1 - event.deltaY * 0.0015)))
+
+    state.rawViewBox.zoomRatio = nextZoomRatio
   }
 
   function handleBackButtonClick() {
@@ -504,7 +507,7 @@ function handleGraphCanvas(canvas, nodeHierarchy, updateNodeHierarchy) {
 
   function getViewBox() {
     const { minX, maxX, minY, maxY, dX, dY, zoomRatio } = state.rawViewBox
-    const zoom = Math.max(0.2, Math.min(1, zoomRatio * width / (maxX - minX), zoomRatio * height / (maxY - minY)))
+    const zoom = zoomRatio * Math.max(0.2, Math.min(2, width / (maxX - minX), height / (maxY - minY)))
 
     return {
       zoom,

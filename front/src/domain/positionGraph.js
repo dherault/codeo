@@ -59,6 +59,8 @@ async function positionGraph(nodes, edges, width, height) {
         selector: 'node',
         style: {
           shape: 'rectangle',
+          width: 256,
+          height: 256,
           // width: 'data(width)',
           // height: 'data(height)',
         },
