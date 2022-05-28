@@ -112,6 +112,8 @@ async function positionGraph(nodes, edges, width, height) {
           dX: 0,
           dY: 0,
           zoomRatio: 1,
+          zoomX: null,
+          zoomY: null,
         },
       })
     })

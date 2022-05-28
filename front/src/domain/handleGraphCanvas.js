@@ -79,6 +79,8 @@ function handleGraphCanvas(canvas, nodeHierarchy, updateNodeHierarchy) {
       maxX: width,
       minY: 0,
       maxY: height,
+      zoomX: null,
+      zoomY: null,
     },
     globalTree: null,
     currentNodeId: currentNodeIdArray ? parseInt(currentNodeIdArray[currentNodeIdArray.length - 1]) : null,
@@ -413,11 +415,16 @@ function handleGraphCanvas(canvas, nodeHierarchy, updateNodeHierarchy) {
   }
 
   function handleMouseMove(event) {
+    state.rawViewBox.zoomX = null
+    state.rawViewBox.zoomY = null
+
     if (state.isPanning) {
       const { zoom } = getViewBox()
 
       state.rawViewBox.dX += event.movementX * dpr / zoom
       state.rawViewBox.dY += event.movementY * dpr / zoom
+
+      console.log('dX', Math.round(state.rawViewBox.dX))
 
       return
     }
@@ -446,14 +453,40 @@ function handleGraphCanvas(canvas, nodeHierarchy, updateNodeHierarchy) {
   }
 
   function handleWheel(event) {
-    const { dX, dY, zoomRatio } = state.rawViewBox
+    const { minX, maxX, minY, maxY, zoomRatio } = state.rawViewBox
     const { zoom, deltaX, deltaY } = getViewBox()
-    const x = (event.clientX - rect.left) * dpr / zoom - deltaX
-    const y = (event.clientY - rect.top) * dpr / zoom - deltaY
 
-    const nextZoomRatio = Math.max(0.2, Math.min(5, zoomRatio * (1 - event.deltaY * 0.0015)))
-
+    // const w2 = (event.clientX - dX) * dpr
+    const nextZoomRatio = Math.max(1 / 6, Math.min(1, zoomRatio * (1 - event.deltaY * 0.0015)))
+    const nextZoom = nextZoomRatio * Math.max(0.2, Math.min(2, width / (maxX - minX), height / (maxY - minY)))
     state.rawViewBox.zoomRatio = nextZoomRatio
+
+    while (true) {
+      const nextDeltaX = ((width - (maxX - minX)) / 2 - minX) / nextZoom + state.rawViewBox.dX
+      const nextDeltaY = ((height - (maxY - minY)) / 2 - minY) / nextZoom + state.rawViewBox.dY
+
+      const x = (event.clientX - rect.left) * dpr
+      const y = (event.clientY - rect.top) * dpr
+
+      if (state.rawViewBox.zoomX === null) {
+        state.rawViewBox.zoomX = x / zoom - deltaX
+        state.rawViewBox.zoomY = y / zoom - deltaY
+      }
+
+      const xx = (state.rawViewBox.zoomX + nextDeltaX) * nextZoom
+      const yy = (state.rawViewBox.zoomY + nextDeltaY) * nextZoom
+
+      if (nextZoomRatio === zoomRatio) return
+
+      if (Math.abs(x - xx) < 1 && Math.abs(y - yy) < 1) {
+        break
+      }
+
+      console.log('(Math.abs(x - xx)', Math.abs(x - xx), Math.abs(y - yy))
+
+      state.rawViewBox.dX += x - xx
+      state.rawViewBox.dY += y - yy
+    }
   }
 
   function handleBackButtonClick() {
